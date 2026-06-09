@@ -34,7 +34,6 @@
         </template>
 
         <template #item.actions="{ item }">
-
           <v-btn
             small
             color="warning"
