@@ -11,11 +11,6 @@
         Question {{ index + 1 }}
       </v-card-title>
 
-      <div>
-        Total Questions:
-        {{ questions.length }}
-      </div>
-
       <v-card-text>
         <h3>
           {{ question.question_text }}

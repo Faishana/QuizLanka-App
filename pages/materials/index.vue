@@ -27,7 +27,7 @@
         <v-btn
           color="success"
           class="mr-2"
-          @click="uploadDialog = true"
+          @click="openUploadDialog"
         >
           <v-icon left>
             mdi-upload
@@ -50,6 +50,15 @@
         :search="search"
         :loading="loading"
       >
+        <template v-slot:item.questions_count="{ item }">
+          <v-chip
+            small
+            color="primary"
+          >
+            {{ item.questions_count }}
+          </v-chip>
+        </template>
+
         <template v-slot:item.processing_status="{ item }">
           <v-chip
             small
@@ -112,16 +121,35 @@
       v-model="viewDialog"
       max-width="700"
     >
-      <v-card
-        color="black"
-        dark
-      >
+      <v-card color="black" dark>
         <v-card-title class="white--text">
           Material Details
         </v-card-title>
 
-        <v-card-text>
-          <pre class="white--text">{{ selectedMaterial }}</pre>
+        <v-card-text v-if="selectedMaterial">
+          <p><strong>Title:</strong> {{ selectedMaterial.title }}</p>
+          <p><strong>Grade:</strong> {{ selectedMaterial.grade_name || selectedMaterial.grade?.name || 'N/A' }}</p>
+          <p><strong>Subject:</strong> {{ selectedMaterial.subject_name || selectedMaterial.subject?.name || 'N/A' }}</p>
+          <p>
+            <strong>Status:</strong>
+            <v-chip
+              small
+              :color="getStatusColor(selectedMaterial.processing_status)"
+              dark
+            >
+              {{ selectedMaterial.processing_status }}
+            </v-chip>
+          </p>
+
+          <v-divider class="my-3" />
+
+          <p><strong>Extracted Text Preview:</strong></p>
+          <div
+            class="text-preview"
+            :style="{ maxHeight: '300px', overflow: 'auto', backgroundColor: '#1a1a1a', padding: '12px', borderRadius: '4px', color: '#e0e0e0' }"
+          >
+            {{ selectedMaterial.extracted_text_preview || 'No text extracted yet.' }}
+          </div>
         </v-card-text>
 
         <v-card-actions>
@@ -152,6 +180,7 @@
           <v-text-field
             v-model="editForm.title"
             label="Title"
+            outlined
           />
 
           <v-select
@@ -160,6 +189,8 @@
             item-text="name"
             item-value="id"
             label="Grade"
+            outlined
+            @change="loadSubjectsByGradeForEdit"
           />
 
           <v-select
@@ -168,14 +199,9 @@
             item-text="name"
             item-value="id"
             label="Subject"
-          />
-
-          <v-select
-            v-model="editForm.lesson_id"
-            :items="lessons"
-            item-text="title"
-            item-value="id"
-            label="Lesson"
+            outlined
+            :disabled="!editForm.grade_id"
+            :loading="subjectsLoading"
           />
         </v-card-text>
 
@@ -191,6 +217,7 @@
 
           <v-btn
             color="primary"
+            :loading="saving"
             @click="updateMaterial"
           >
             Update
@@ -247,7 +274,9 @@
         <v-card-text>
           <v-text-field
             v-model="uploadForm.title"
-            label="Title"
+            label="Material Title"
+            outlined
+            required
           />
 
           <v-select
@@ -256,6 +285,9 @@
             item-text="name"
             item-value="id"
             label="Grade"
+            outlined
+            required
+            @change="loadSubjectsByGradeForUpload"
           />
 
           <v-select
@@ -264,14 +296,10 @@
             item-text="name"
             item-value="id"
             label="Subject"
-          />
-
-          <v-select
-            v-model="uploadForm.lesson_id"
-            :items="lessons"
-            item-text="title"
-            item-value="id"
-            label="Lesson"
+            outlined
+            required
+            :disabled="!uploadForm.grade_id"
+            :loading="subjectsLoading"
           />
 
           <v-file-input
@@ -289,13 +317,14 @@
 
           <v-btn
             text
-            @click="uploadDialog = false"
+            @click="closeUploadDialog"
           >
             Cancel
           </v-btn>
 
           <v-btn
             color="success"
+            :loading="uploading"
             @click="uploadMaterial"
           >
             Upload
@@ -313,35 +342,40 @@ export default {
   data () {
     return {
       loading: false,
+      saving: false,
+      uploading: false,
+      subjectsLoading: false,
       search: '',
+
       materials: [],
+      grades: [],
+      subjects: [],
+
       selectedMaterial: null,
       viewDialog: false,
       uploadDialog: false,
       editDialog: false,
       deleteDialog: false,
       materialToDelete: null,
+
       editForm: {
         id: null,
         title: '',
         grade_id: null,
-        subject_id: null,
-        lesson_id: null
+        subject_id: null
       },
+
       uploadForm: {
         title: '',
         grade_id: null,
         subject_id: null,
-        lesson_id: null,
         file: null
       },
-      grades: [],
-      subjects: [],
-      lessons: [],
+
       headers: [
         { text: 'ID', value: 'id' },
         { text: 'Title', value: 'title' },
-        { text: 'Questions', value: 'questions_count' },
+        { text: 'Questions', value: 'questions_count', sortable: true },
         { text: 'Status', value: 'processing_status' },
         { text: 'Created', value: 'created_at' },
         { text: 'Actions', value: 'actions', sortable: false }
@@ -349,40 +383,26 @@ export default {
     }
   },
 
-  watch: {
-    'uploadForm.grade_id' (gradeId) {
-      this.loadSubjectsByGrade(gradeId)
-      this.uploadForm.subject_id = null
-      this.uploadForm.lesson_id = null
-    },
-
-    'uploadForm.subject_id' (subjectId) {
-      this.loadLessonsBySubject(subjectId)
-      this.uploadForm.lesson_id = null
-    },
-
-    'editForm.grade_id' (gradeId) {
-      this.loadSubjectsByGradeForEdit(gradeId)
-      this.editForm.subject_id = null
-      this.editForm.lesson_id = null
-    },
-
-    'editForm.subject_id' (subjectId) {
-      this.loadLessonsBySubjectForEdit(subjectId)
-      this.editForm.lesson_id = null
-    }
-  },
-
   mounted () {
     this.loadMaterials()
+    this.loadGrades()
 
+    // Auto-refresh every 5 seconds only if there are pending materials
     this.interval = setInterval(() => {
-      this.loadMaterials()
+      const hasPending = this.materials.some(
+        m => m.processing_status === 'pending'
+      )
+
+      if (hasPending) {
+        this.loadMaterials()
+      }
     }, 5000)
   },
 
   beforeDestroy () {
-    clearInterval(this.interval)
+    if (this.interval) {
+      clearInterval(this.interval)
+    }
   },
 
   methods: {
@@ -405,88 +425,65 @@ export default {
         this.grades = response.data.data || response.data
       } catch (error) {
         console.error('Failed to load grades', error)
+        alert('Failed to load grades')
       }
     },
 
-    async loadAllSubjects () {
-      try {
-        const response = await this.$axios.get('/subjects')
-        this.subjects = response.data.data || response.data
-      } catch (error) {
-        console.error('Failed to load subjects', error)
-      }
-    },
-
-    async loadSubjectsByGrade (gradeId) {
+    async loadSubjectsByGradeForUpload (gradeId) {
       if (!gradeId) {
         this.subjects = []
+        this.uploadForm.subject_id = null
         return
       }
-      try {
-        const response = await this.$axios.get(`/subjects/${gradeId}`)
-        this.subjects = response.data.data || response.data
-      } catch (error) {
-        console.error('Failed to load subjects by grade', error)
-      }
-    },
 
-    async loadLessonsBySubject (subjectId) {
-      if (!subjectId) {
-        this.lessons = []
-        return
-      }
       try {
-        const response = await this.$axios.get(`/lessons/${subjectId}`)
-        this.lessons = response.data.data || response.data
+        this.subjectsLoading = true
+        const response = await this.$axios.get(`/subjects/grade/${gradeId}`)
+        this.subjects = response.data.data || response.data
+        this.uploadForm.subject_id = null
       } catch (error) {
-        console.error('Failed to load lessons', error)
+        console.error('Failed to load subjects', error)
+        alert('Failed to load subjects')
+      } finally {
+        this.subjectsLoading = false
       }
     },
 
     async loadSubjectsByGradeForEdit (gradeId) {
       if (!gradeId) {
         this.subjects = []
+        this.editForm.subject_id = null
         return
       }
+
       try {
-        const response = await this.$axios.get(`/subjects/${gradeId}`)
+        this.subjectsLoading = true
+        const response = await this.$axios.get(`/subjects/grade/${gradeId}`)
         this.subjects = response.data.data || response.data
+        // Clear subject when grade changes
+        this.editForm.subject_id = null
       } catch (error) {
-        console.error('Failed to load subjects by grade', error)
-      }
-    },
-
-    async loadLessonsBySubjectForEdit (subjectId) {
-      if (!subjectId) {
-        this.lessons = []
-        return
-      }
-      try {
-        const response = await this.$axios.get(`/lessons/${subjectId}`)
-        this.lessons = response.data.data || response.data
-      } catch (error) {
-        console.error('Failed to load lessons', error)
-      }
-    },
-
-    async generateQuestions (material) {
-      if (material.processing_status !== 'completed') {
-        alert('Cannot generate questions: Material processing is not completed yet.')
-        return
-      }
-      try {
-        await this.$axios.post(`/materials/${material.id}/generate-questions`)
-        alert('Questions generated successfully')
-      } catch (error) {
-        console.error('Failed to generate questions', error)
-        alert('Failed to generate questions')
+        console.error('Failed to load subjects', error)
+        alert('Failed to load subjects')
+      } finally {
+        this.subjectsLoading = false
       }
     },
 
     async viewMaterial (material) {
       try {
         const response = await this.$axios.get(`/materials/${material.id}`)
-        this.selectedMaterial = response.data
+        const materialData = response.data.data || response.data
+
+        // Ensure grade and subject names are accessible
+        this.selectedMaterial = {
+          ...materialData,
+          grade_name: materialData.grade?.name || materialData.grade_name || materialData.grade,
+          subject_name: materialData.subject?.name || materialData.subject_name || materialData.subject,
+          title: materialData.title,
+          processing_status: materialData.processing_status,
+          extracted_text_preview: materialData.extracted_text_preview
+        }
         this.viewDialog = true
       } catch (error) {
         console.error('Failed to load material', error)
@@ -494,34 +491,79 @@ export default {
       }
     },
 
+    openUploadDialog () {
+      this.uploadForm = {
+        title: '',
+        grade_id: null,
+        subject_id: null,
+        file: null
+      }
+      this.subjects = []
+      this.uploadDialog = true
+    },
+
+    closeUploadDialog () {
+      this.uploadDialog = false
+      this.uploadForm = {
+        title: '',
+        grade_id: null,
+        subject_id: null,
+        file: null
+      }
+      this.subjects = []
+    },
+
     editMaterial (material) {
       this.editForm = {
         id: material.id,
         title: material.title,
         grade_id: material.grade_id,
-        subject_id: material.subject_id,
-        lesson_id: material.lesson_id
+        subject_id: material.subject_id
       }
+
+      // Load subjects for the current grade
       this.loadSubjectsByGradeForEdit(material.grade_id)
-      this.loadLessonsBySubjectForEdit(material.subject_id)
       this.editDialog = true
     },
 
     async updateMaterial () {
+      // Validation
+      if (!this.editForm.title || !this.editForm.title.trim()) {
+        alert('Title is required')
+        return
+      }
+
+      if (!this.editForm.grade_id) {
+        alert('Grade is required')
+        return
+      }
+
+      if (!this.editForm.subject_id) {
+        alert('Subject is required')
+        return
+      }
+
+      this.saving = true
+
       try {
         await this.$axios.put(`/materials/${this.editForm.id}`, {
           title: this.editForm.title,
           grade_id: this.editForm.grade_id,
-          subject_id: this.editForm.subject_id,
-          lesson_id: this.editForm.lesson_id
+          subject_id: this.editForm.subject_id
         })
 
         alert('Material updated successfully')
         this.editDialog = false
-        this.loadMaterials()
+        await this.loadMaterials()
       } catch (error) {
         console.error('Failed to update material', error)
-        alert('Failed to update material')
+        if (error.response?.data?.message) {
+          alert(error.response.data.message)
+        } else {
+          alert('Failed to update material')
+        }
+      } finally {
+        this.saving = false
       }
     },
 
@@ -535,10 +577,14 @@ export default {
         await this.$axios.delete(`/materials/${this.materialToDelete.id}`)
         alert('Material deleted successfully')
         this.deleteDialog = false
-        this.loadMaterials()
+        await this.loadMaterials()
       } catch (error) {
         console.error('Failed to delete material', error)
-        alert('Failed to delete material')
+        if (error.response?.data?.message) {
+          alert(error.response.data.message)
+        } else {
+          alert('Failed to delete material')
+        }
       }
     },
 
@@ -547,45 +593,67 @@ export default {
     },
 
     async uploadMaterial () {
+      // Validation
+      if (!this.uploadForm.title || !this.uploadForm.title.trim()) {
+        alert('Title is required')
+        return
+      }
+
+      if (!this.uploadForm.grade_id) {
+        alert('Grade is required')
+        return
+      }
+
+      if (!this.uploadForm.subject_id) {
+        alert('Subject is required')
+        return
+      }
+
       if (!this.uploadForm.file) {
         alert('Please select a file')
         return
       }
+
+      this.uploading = true
+
       try {
         const formData = new FormData()
         formData.append('grade_id', this.uploadForm.grade_id)
         formData.append('subject_id', this.uploadForm.subject_id)
-        formData.append('lesson_id', this.uploadForm.lesson_id)
         formData.append('title', this.uploadForm.title)
-        formData.append('file', this.uploadForm.file)
 
-        await this.$axios.post('/materials/upload', formData, {
+        // Handle file safely (Vuetify sometimes returns array)
+        const file = Array.isArray(this.uploadForm.file)
+          ? this.uploadForm.file[0]
+          : this.uploadForm.file
+
+        formData.append('file', file)
+
+        const response = await this.$axios.post('/materials/upload', formData, {
           headers: {
             'Content-Type': 'multipart/form-data'
           },
           onUploadProgress: (progressEvent) => {
             const percent = Math.round(
-              (progressEvent.loaded * 100) /
-              progressEvent.total
+              (progressEvent.loaded * 100) / progressEvent.total
             )
-
             console.log('Upload:', percent + '%')
           }
         })
 
-        alert('Material uploaded successfully')
-        this.uploadDialog = false
-        this.uploadForm = {
-          title: '',
-          grade_id: null,
-          subject_id: null,
-          lesson_id: null,
-          file: null
-        }
-        this.loadMaterials()
+        // Use the message returned from backend
+        alert(response.data.message || 'Material uploaded successfully')
+        this.closeUploadDialog()
+        await this.loadMaterials()
       } catch (error) {
         console.error('Upload failed', error)
-        alert('Upload failed')
+        if (error.response?.data?.message) {
+          alert(error.response.data.message)
+        } else {
+          alert('Upload failed')
+        }
+      } finally {
+        this.uploading = false
       }
     },
 
@@ -593,13 +661,10 @@ export default {
       switch (status) {
         case 'completed':
           return 'success'
-
         case 'pending':
           return 'warning'
-
         case 'failed':
           return 'error'
-
         default:
           return 'grey'
       }
@@ -609,13 +674,11 @@ export default {
 </script>
 
 <style scoped>
-pre {
-  background-color: transparent;
-  padding: 16px;
-  border-radius: 4px;
-  overflow-x: auto;
+.text-preview {
+  font-family: monospace;
+  font-size: 14px;
+  line-height: 1.5;
   white-space: pre-wrap;
   word-wrap: break-word;
-  color: white;
 }
 </style>
