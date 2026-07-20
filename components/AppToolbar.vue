@@ -1,34 +1,60 @@
 <template>
-  <v-app-bar
+  <v-navigation-drawer
     app
-    color="primary"
-    dark
+    permanent
   >
-    <v-toolbar-title>
-      QuizLanka AI
-    </v-toolbar-title>
+    <v-list dense nav>
+      <v-list-item to="/" exact>
+        <v-list-item-icon>
+          <v-icon>mdi-view-dashboard</v-icon>
+        </v-list-item-icon>
 
-    <v-spacer />
+        <v-list-item-title>
+          Dashboard
+        </v-list-item-title>
+      </v-list-item>
 
-    <v-btn
-      text
-      @click="logout"
-    >
-      Logout
-    </v-btn>
-  </v-app-bar>
+      <v-list-item to="/materials">
+        <v-list-item-icon>
+          <v-icon>mdi-file-pdf-box</v-icon>
+        </v-list-item-icon>
+
+        <v-list-item-title>
+          Materials
+        </v-list-item-title>
+      </v-list-item>
+
+      <v-list-item to="/questions">
+        <v-list-item-icon>
+          <v-icon>mdi-help-circle</v-icon>
+        </v-list-item-icon>
+
+        <v-list-item-title>
+          Questions
+        </v-list-item-title>
+      </v-list-item>
+
+      <v-divider class="my-2" />
+
+      <v-list-item to="/grades">
+        <v-list-item-icon>
+          <v-icon>mdi-school</v-icon>
+        </v-list-item-icon>
+
+        <v-list-item-title>
+          Grades
+        </v-list-item-title>
+      </v-list-item>
+
+      <v-list-item to="/subjects">
+        <v-list-item-icon>
+          <v-icon>mdi-book-open-page-variant</v-icon>
+        </v-list-item-icon>
+
+        <v-list-item-title>
+          Subjects
+        </v-list-item-title>
+      </v-list-item>
+    </v-list>
+  </v-navigation-drawer>
 </template>
-
-<script>
-export default {
-
-  methods: {
-
-    logout () {
-      localStorage.removeItem('token')
-
-      this.$router.push('/login')
-    }
-  }
-}
-</script>

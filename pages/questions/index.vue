@@ -1,76 +1,92 @@
 <template>
   <div>
-    <v-row class="mb-4">
-      <v-col cols="12" md="4">
-        <h1>Questions Management</h1>
-      </v-col>
+    <div class="d-flex flex-wrap align-center justify-space-between mb-6">
+      <div>
+        <h1 class="page-title">
+          Questions Management
+        </h1>
+        <p class="page-subtitle">
+          Browse, filter, and maintain the question bank.
+        </p>
+      </div>
+    </div>
 
-      <v-col cols="12" md="2">
-        <v-select
-          v-model="filters.grade_id"
-          :items="grades"
-          item-text="name"
-          item-value="id"
-          label="Grade"
-          dense
-          outlined
-          clearable
-          hide-details
-          @change="applyFilters"
-        />
-      </v-col>
+    <v-card class="panel-card mb-6" flat>
+      <v-card-text>
+        <v-row>
+          <v-col cols="12" md="3">
+            <v-select
+              v-model="filters.grade_id"
+              :items="grades"
+              item-text="name"
+              item-value="id"
+              label="Grade"
+              dense
+              outlined
+              clearable
+              hide-details
+              class="dark-field"
+              @change="applyFilters"
+            />
+          </v-col>
 
-      <v-col cols="12" md="2">
-        <v-select
-          v-model="filters.subject_id"
-          :items="subjects"
-          item-text="name"
-          item-value="id"
-          label="Subject"
-          dense
-          outlined
-          clearable
-          hide-details
-          @change="applyFilters"
-        />
-      </v-col>
+          <v-col cols="12" md="3">
+            <v-select
+              v-model="filters.subject_id"
+              :items="subjects"
+              item-text="name"
+              item-value="id"
+              label="Subject"
+              dense
+              outlined
+              clearable
+              hide-details
+              class="dark-field"
+              @change="applyFilters"
+            />
+          </v-col>
 
-      <v-col cols="12" md="2">
-        <v-select
-          v-model="filters.difficulty"
-          :items="difficultyOptions"
-          label="Difficulty"
-          dense
-          outlined
-          clearable
-          hide-details
-          @change="applyFilters"
-        />
-      </v-col>
+          <v-col cols="12" md="3">
+            <v-select
+              v-model="filters.difficulty"
+              :items="difficultyOptions"
+              label="Difficulty"
+              dense
+              outlined
+              clearable
+              hide-details
+              class="dark-field"
+              @change="applyFilters"
+            />
+          </v-col>
 
-      <v-col cols="12" md="2">
-        <v-text-field
-          v-model="search"
-          append-icon="mdi-magnify"
-          label="Search Questions"
-          dense
-          outlined
-          hide-details
-          @input="onSearchInput"
-        />
-      </v-col>
-    </v-row>
+          <v-col cols="12" md="3">
+            <v-text-field
+              v-model="search"
+              append-icon="mdi-magnify"
+              label="Search Questions"
+              dense
+              outlined
+              hide-details
+              class="dark-field"
+              @input="onSearchInput"
+            />
+          </v-col>
+        </v-row>
+      </v-card-text>
+    </v-card>
 
-    <v-card>
-      <v-card-title>
+    <v-card class="panel-card" flat>
+      <v-card-title class="panel-title d-flex align-center">
         Questions List
         <v-spacer />
         <v-btn
-          color="primary"
+          class="refresh-btn"
+          small
           :loading="loading"
           @click="loadQuestions"
         >
-          <v-icon left>
+          <v-icon left size="16">
             mdi-refresh
           </v-icon>
           Refresh
@@ -86,58 +102,35 @@
         :footer-props="{
           'items-per-page-options': [10, 20, 50, 100]
         }"
-        class="elevation-1"
+        class="dark-table"
       >
         <template #item.question_text="{ item }">
-          <div
-            style="
-              max-width: 600px;
-              white-space: nowrap;
-              overflow: hidden;
-              text-overflow: ellipsis;
-            "
-          >
+          <div class="question-cell">
             {{ item.question_text }}
           </div>
         </template>
 
         <template #item.correct_answer_display="{ item }">
-          <v-chip
-            small
-            color="blue-grey darken-2"
-            text-color="white"
-          >
+          <v-chip small class="chip-neutral">
             {{ item.correct_answer }}.
             {{ item.correct_option_text || 'N/A' }}
           </v-chip>
         </template>
 
         <template #item.grade="{ item }">
-          <v-chip
-            small
-            color="info"
-            dark
-          >
+          <v-chip small class="chip-cyan">
             {{ item.grade?.name || 'N/A' }}
           </v-chip>
         </template>
 
         <template #item.subject="{ item }">
-          <v-chip
-            small
-            color="primary"
-            dark
-          >
+          <v-chip small class="chip-violet">
             {{ item.subject?.name || 'N/A' }}
           </v-chip>
         </template>
 
         <template #item.difficulty="{ item }">
-          <v-chip
-            small
-            :color="getDifficultyColor(item.difficulty)"
-            dark
-          >
+          <v-chip small :class="getDifficultyClass(item.difficulty)">
             {{ item.difficulty }}
           </v-chip>
         </template>
@@ -145,8 +138,7 @@
         <template #item.actions="{ item }">
           <v-btn
             small
-            color="warning"
-            class="mr-2"
+            class="edit-btn mr-2"
             @click="editQuestion(item)"
           >
             <v-icon small left>
@@ -157,7 +149,7 @@
 
           <v-btn
             small
-            color="error"
+            class="delete-btn"
             @click="deleteQuestion(item)"
           >
             <v-icon small left>
@@ -168,7 +160,7 @@
         </template>
 
         <template #no-data>
-          <div class="text-center pa-4">
+          <div class="text-center pa-8 empty-text">
             No questions found
           </div>
         </template>
@@ -181,8 +173,8 @@
       max-width="900"
       scrollable
     >
-      <v-card>
-        <v-card-title class="headline">
+      <v-card class="dialog-card">
+        <v-card-title class="dialog-title">
           Edit Question
         </v-card-title>
 
@@ -193,6 +185,7 @@
             outlined
             rows="3"
             required
+            class="dark-field mt-4"
           />
 
           <v-row>
@@ -203,6 +196,9 @@
                 item-text="text"
                 item-value="value"
                 label="Difficulty"
+                outlined
+                dense
+                class="dark-field"
               />
             </v-col>
 
@@ -214,11 +210,12 @@
                 outlined
                 dense
                 required
+                class="dark-field"
               />
             </v-col>
           </v-row>
 
-          <h4 class="mt-4 mb-2">
+          <h4 class="options-heading mt-2 mb-2">
             Options
           </h4>
           <v-row
@@ -233,6 +230,7 @@
                 outlined
                 dense
                 label="Key"
+                class="dark-field"
               />
             </v-col>
 
@@ -242,6 +240,7 @@
                 outlined
                 dense
                 :label="`Option ${option.option_key}`"
+                class="dark-field"
               />
             </v-col>
           </v-row>
@@ -251,19 +250,21 @@
             label="Explanation (Optional)"
             outlined
             rows="3"
+            class="dark-field"
           />
         </v-card-text>
 
-        <v-card-actions>
+        <v-card-actions class="dialog-actions">
           <v-spacer />
           <v-btn
             text
+            class="cancel-btn"
             @click="closeEditDialog"
           >
             Cancel
           </v-btn>
           <v-btn
-            color="primary"
+            class="save-btn"
             :loading="saving"
             @click="updateQuestion"
           >
@@ -276,31 +277,32 @@
     <!-- Delete Confirmation Dialog -->
     <v-dialog
       v-model="deleteDialog"
-      max-width="500"
+      max-width="480"
     >
-      <v-card>
-        <v-card-title class="headline error--text">
+      <v-card class="dialog-card">
+        <v-card-title class="dialog-title dialog-title--danger">
           Delete Question
         </v-card-title>
 
-        <v-card-text>
+        <v-card-text class="dialog-body">
           Are you sure you want to delete this question?
           <br>
-          <strong>"{{ truncateText(questionToDelete?.question_text, 100) }}"</strong>
+          <strong class="delete-preview">"{{ truncateText(questionToDelete?.question_text, 100) }}"</strong>
           <br><br>
           This action cannot be undone.
         </v-card-text>
 
-        <v-card-actions>
+        <v-card-actions class="dialog-actions">
           <v-spacer />
           <v-btn
             text
+            class="cancel-btn"
             @click="deleteDialog = false"
           >
             Cancel
           </v-btn>
           <v-btn
-            color="error"
+            class="delete-confirm-btn"
             :loading="deleting"
             @click="confirmDelete"
           >
@@ -401,7 +403,6 @@ export default {
   methods: {
     async loadLookupData () {
       try {
-        // Load grades for filter
         const gradesResponse = await this.$axios.get('/grades', {
           params: { per_page: 100 }
         })
@@ -409,7 +410,6 @@ export default {
           this.grades = gradesResponse.data.data || []
         }
 
-        // Load subjects for filter
         const subjectsResponse = await this.$axios.get('/subjects', {
           params: { per_page: 100 }
         })
@@ -425,24 +425,20 @@ export default {
       try {
         this.loading = true
 
-        // Build query parameters
         const params = {
           page: this.tableOptions.page || 1,
           per_page: this.tableOptions.itemsPerPage || 20
         }
 
-        // Add sorting
         if (this.tableOptions.sortBy && this.tableOptions.sortBy.length > 0) {
           params.sort_by = this.tableOptions.sortBy[0]
           params.sort_order = this.tableOptions.sortDesc[0] ? 'desc' : 'asc'
         }
 
-        // Add search if present
         if (this.search && this.search.trim()) {
           params.search = this.search.trim()
         }
 
-        // Add filters
         if (this.filters.grade_id) {
           params.grade_id = this.filters.grade_id
         }
@@ -453,13 +449,11 @@ export default {
           params.difficulty = this.filters.difficulty
         }
 
-        const response = await this.$axios.get('/questions', { params })
+        const response = await this.$axios.get('/admin/questions', { params })
 
-        // Handle the response structure from backend
         if (response.data.success) {
           const paginatedData = response.data.data
 
-          // Extract questions from paginated data
           this.questions = paginatedData.data || []
           this.totalQuestions = paginatedData.total || 0
           this.currentPage = paginatedData.current_page || 1
@@ -517,7 +511,6 @@ export default {
             options: questionData.options || []
           }
 
-          // Sort options by option_key (A, B, C, D)
           if (this.editForm.options.length > 0) {
             this.editForm.options.sort((a, b) =>
               a.option_key.localeCompare(b.option_key)
@@ -537,7 +530,6 @@ export default {
     },
 
     async updateQuestion () {
-      // Validation
       if (!this.editForm.question_text || !this.editForm.question_text.trim()) {
         this.$toast?.error('Question text is required') || alert('Question text is required')
         return
@@ -553,7 +545,6 @@ export default {
         return
       }
 
-      // Check if all options have text
       const hasEmptyOptions = this.editForm.options.some(
         option => !option.option_text || !option.option_text.trim()
       )
@@ -656,16 +647,16 @@ export default {
       return text.substring(0, length) + '...'
     },
 
-    getDifficultyColor (difficulty) {
+    getDifficultyClass (difficulty) {
       switch (difficulty?.toLowerCase()) {
         case 'easy':
-          return 'success'
+          return 'chip-green'
         case 'medium':
-          return 'warning'
+          return 'chip-amber'
         case 'hard':
-          return 'error'
+          return 'chip-red'
         default:
-          return 'grey'
+          return 'chip-neutral'
       }
     }
   }
@@ -673,7 +664,169 @@ export default {
 </script>
 
 <style scoped>
-.v-data-table >>> .v-data-table__wrapper {
-  overflow-x: auto;
+.page-title {
+  color: #F1F5F9;
+  font-family: 'Sora', 'Poppins', sans-serif;
+  font-weight: 700;
+  font-size: 24px;
+  margin: 0;
+}
+.page-subtitle {
+  color: #94A3B8;
+  font-size: 13.5px;
+  margin: 4px 0 0;
+}
+
+.panel-card {
+  background: rgba(17, 25, 45, 0.72) !important;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 14px;
+}
+.panel-title {
+  color: #F1F5F9;
+  font-family: 'Sora', 'Poppins', sans-serif;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.refresh-btn {
+  background: rgba(34, 211, 238, 0.12) !important;
+  color: #22D3EE !important;
+  text-transform: none;
+  font-weight: 600;
+  box-shadow: none !important;
+}
+
+/* form fields */
+.dark-field ::v-deep .v-input__control .v-input__slot {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border-radius: 8px;
+}
+.dark-field ::v-deep fieldset {
+  border-color: rgba(148, 163, 184, 0.25) !important;
+}
+.dark-field ::v-deep input,
+.dark-field ::v-deep textarea,
+.dark-field ::v-deep .v-select__selection {
+  color: #F1F5F9 !important;
+}
+.dark-field ::v-deep .v-label {
+  color: #94A3B8 !important;
+}
+.dark-field.v-input--is-focused ::v-deep fieldset {
+  border-color: #22D3EE !important;
+}
+.dark-field ::v-deep .v-icon {
+  color: #64748B !important;
+}
+
+/* data table */
+.dark-table {
+  background: transparent !important;
+}
+.dark-table ::v-deep table {
+  background: transparent;
+}
+.dark-table ::v-deep th {
+  background: rgba(148, 163, 184, 0.05) !important;
+  color: #94A3B8 !important;
+  font-size: 11.5px !important;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14) !important;
+}
+.dark-table ::v-deep td {
+  color: #E2E8F0 !important;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.08) !important;
+  font-size: 13.5px;
+}
+.dark-table ::v-deep tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+.dark-table ::v-deep .v-data-footer {
+  color: #94A3B8 !important;
+  border-top: 1px solid rgba(148, 163, 184, 0.12) !important;
+}
+.dark-table ::v-deep .v-data-footer__select .v-select__selection,
+.dark-table ::v-deep .v-data-footer__icons-before .v-icon,
+.dark-table ::v-deep .v-data-footer__icons-after .v-icon {
+  color: #94A3B8 !important;
+}
+
+.question-cell {
+  max-width: 460px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.empty-text {
+  color: #64748B;
+}
+
+/* chips */
+.chip-neutral { background: rgba(148, 163, 184, 0.14) !important; color: #E2E8F0 !important; }
+.chip-cyan { background: rgba(34, 211, 238, 0.14) !important; color: #22D3EE !important; }
+.chip-violet { background: rgba(139, 92, 246, 0.16) !important; color: #A78BFA !important; }
+.chip-green { background: rgba(52, 211, 153, 0.16) !important; color: #34D399 !important; }
+.chip-amber { background: rgba(245, 158, 11, 0.16) !important; color: #F59E0B !important; }
+.chip-red { background: rgba(248, 113, 113, 0.16) !important; color: #F87171 !important; }
+
+/* action buttons */
+.edit-btn {
+  background: rgba(245, 158, 11, 0.12) !important;
+  color: #F59E0B !important;
+  text-transform: none;
+  box-shadow: none !important;
+}
+.delete-btn {
+  background: rgba(248, 113, 113, 0.12) !important;
+  color: #F87171 !important;
+  text-transform: none;
+  box-shadow: none !important;
+}
+
+/* dialogs */
+.dialog-card {
+  background: #0F1729 !important;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+}
+.dialog-title {
+  color: #F1F5F9;
+  font-family: 'Sora', 'Poppins', sans-serif;
+  font-weight: 700;
+}
+.dialog-title--danger {
+  color: #F87171;
+}
+.dialog-body {
+  color: #CBD5E1;
+}
+.delete-preview {
+  color: #F1F5F9;
+}
+.options-heading {
+  color: #CBD5E1;
+  font-family: 'Sora', 'Poppins', sans-serif;
+}
+.dialog-actions {
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+  padding-top: 12px;
+}
+.cancel-btn {
+  color: #94A3B8 !important;
+  text-transform: none;
+}
+.save-btn {
+  background: linear-gradient(90deg, #22D3EE, #6366F1) !important;
+  color: #0B1120 !important;
+  font-weight: 700;
+  text-transform: none;
+}
+.delete-confirm-btn {
+  background: #F87171 !important;
+  color: #0B1120 !important;
+  font-weight: 700;
+  text-transform: none;
 }
 </style>

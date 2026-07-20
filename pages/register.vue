@@ -1,6 +1,5 @@
 <template>
   <v-container fluid class="auth-screen d-flex align-center justify-center">
-    <!-- ambient glow accents -->
     <div class="glow glow--cyan" />
     <div class="glow glow--violet" />
 
@@ -15,11 +14,28 @@
           QuizLanka <span class="accent">AI</span>
         </h1>
         <p class="brand-subtitle">
-          AI Powered Learning Platform
+          Create your admin account
         </p>
       </div>
 
-      <v-form ref="form" autocomplete="off" @submit.prevent="login">
+      <v-form ref="form" autocomplete="off" @submit.prevent="register">
+        <label class="field-label">
+          <v-icon size="16" color="#22D3EE" class="mr-1">
+            mdi-account-outline
+          </v-icon>
+          Full Name
+        </label>
+        <v-text-field
+          v-model="name"
+          placeholder="John Doe"
+          autocomplete="name"
+          dense
+          outlined
+          hide-details="auto"
+          class="auth-field mb-4"
+          :rules="[rules.required]"
+        />
+
         <label class="field-label">
           <v-icon size="16" color="#22D3EE" class="mr-1">
             mdi-email-outline
@@ -28,7 +44,7 @@
         </label>
         <v-text-field
           v-model="email"
-          placeholder="Enter your email"
+          placeholder="admin@quizlanka.ai"
           type="email"
           autocomplete="username"
           spellcheck="false"
@@ -49,58 +65,74 @@
         </label>
         <v-text-field
           v-model="password"
-          placeholder="Enter your password"
+          placeholder="At least 8 characters"
           :type="showPassword ? 'text' : 'password'"
           autocomplete="new-password"
           :append-icon="showPassword ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
           dense
           outlined
           hide-details="auto"
-          class="auth-field mb-2"
-          :rules="[rules.required]"
+          class="auth-field mb-4"
+          :rules="[rules.required, rules.minLen]"
           @click:append="showPassword = !showPassword"
         />
 
-        <div class="d-flex align-center justify-space-between my-4 row-utils">
-          <v-checkbox
-            v-model="rememberMe"
-            label="Remember Me"
-            dense
-            hide-details
-            color="#22D3EE"
-            class="remember-check"
-          />
-          <a class="forgot-link" href="#" @click.prevent="$router.push('/forgot-password')">
-            Forgot Password?
-          </a>
-        </div>
+        <label class="field-label">
+          <v-icon size="16" color="#22D3EE" class="mr-1">
+            mdi-lock-check-outline
+          </v-icon>
+          Confirm Password
+        </label>
+        <v-text-field
+          v-model="passwordConfirmation"
+          placeholder="Re-enter your password"
+          :type="showConfirm ? 'text' : 'password'"
+          autocomplete="new-password"
+          :append-icon="showConfirm ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
+          dense
+          outlined
+          hide-details="auto"
+          class="auth-field mb-2"
+          :rules="[rules.required, rules.match]"
+          @click:append="showConfirm = !showConfirm"
+        />
 
         <v-alert
           v-if="errorMessage"
           type="error"
           dense
           text
-          class="mb-4"
+          class="mt-4 mb-2"
         >
           {{ errorMessage }}
+        </v-alert>
+
+        <v-alert
+          v-if="successMessage"
+          type="success"
+          dense
+          text
+          class="mt-4 mb-2"
+        >
+          {{ successMessage }}
         </v-alert>
 
         <v-btn
           block
           large
           depressed
-          class="sign-in-btn"
+          class="sign-in-btn mt-4"
           :loading="loading"
           type="submit"
         >
-          Sign In
+          Create Account
         </v-btn>
       </v-form>
 
       <div class="text-center mt-6 register-hint">
-        Need an admin account?
-        <nuxt-link to="/register">
-          Register
+        Already have an account?
+        <nuxt-link to="/login">
+          Sign In
         </nuxt-link>
       </div>
 
@@ -118,27 +150,32 @@
 export default {
 
   layout: 'auth',
-  middleware: 'guest',
 
   data () {
     return {
+      name: '',
       email: '',
       password: '',
-      rememberMe: false,
+      passwordConfirmation: '',
       showPassword: false,
+      showConfirm: false,
       loading: false,
       errorMessage: '',
+      successMessage: '',
       rules: {
         required: v => !!v || 'This field is required',
-        email: v => /.+@.+\..+/.test(v) || 'Enter a valid email'
+        email: v => /.+@.+\..+/.test(v) || 'Enter a valid email',
+        minLen: v => (v && v.length >= 8) || 'Minimum 8 characters',
+        match: v => v === this.password || 'Passwords do not match'
       }
     }
   },
 
   methods: {
 
-    async login () {
+    async register () {
       this.errorMessage = ''
+      this.successMessage = ''
 
       if (this.$refs.form && !this.$refs.form.validate()) {
         return
@@ -147,36 +184,31 @@ export default {
       this.loading = true
 
       try {
-        const res = await this.$axios.post('/auth/login', {
+        const res = await this.$axios.post('/auth/admin-register', {
+          name: this.name,
           email: this.email,
-          password: this.password
+          password: this.password,
+          password_confirmation: this.passwordConfirmation
         })
 
-        const token = res.data.token
-        const user = res.data.user
-        const roles = res.data.roles || []
+        if (res.data.success) {
+          this.successMessage = res.data.message || 'Admin registered successfully'
 
-        // Admin only access
-        if (!roles.includes('admin')) {
-          this.errorMessage = 'Admin access only'
-          this.loading = false
-          return
+          setTimeout(() => {
+            this.$router.push('/login')
+          }, 1200)
         }
-
-        this.$store.commit('auth/SET_TOKEN', token)
-        this.$store.commit('auth/SET_USER', user)
-
-        if (this.rememberMe) {
-          localStorage.setItem('token', token)
-          localStorage.setItem('user', JSON.stringify(user))
-        } else {
-          sessionStorage.setItem('token', token)
-          sessionStorage.setItem('user', JSON.stringify(user))
-        }
-
-        this.$router.push('/dashboard')
       } catch (error) {
-        this.errorMessage = error.response?.data?.message || 'Login failed. Please check your credentials.'
+        const errors = error.response?.data?.errors
+
+        if (errors) {
+          // Laravel validation errors: { field: [messages] }
+          this.errorMessage = Object.values(errors)
+            .map(msgs => msgs[0])
+            .join(' ')
+        } else {
+          this.errorMessage = error.response?.data?.message || 'Registration failed. Please try again.'
+        }
       } finally {
         this.loading = false
       }
@@ -334,24 +366,6 @@ export default {
 .auth-field ::v-deep input:-moz-autofill {
   box-shadow: 0 0 0px 1000px rgba(255,255,255,.03) inset !important;
   -moz-text-fill-color: #F1F5F9 !important;
-}
-
-.row-utils {
-  flex-wrap: wrap;
-}
-
-.remember-check ::v-deep label {
-  color: #94A3B8 !important;
-  font-size: 13px;
-}
-
-.forgot-link {
-  font-size: 13px;
-  color: #22D3EE;
-  text-decoration: none;
-}
-.forgot-link:hover {
-  text-decoration: underline;
 }
 
 .sign-in-btn {

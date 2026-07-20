@@ -1,14 +1,17 @@
 <template>
   <div>
-    <v-row class="mb-4">
-      <v-col cols="12">
-        <h1>Grades</h1>
-      </v-col>
-    </v-row>
-
-    <v-card>
-      <v-card-title>
+    <div class="mb-6">
+      <h1 class="page-title">
         Grades
+      </h1>
+      <p class="page-subtitle">
+        Manage the grade levels available across the platform.
+      </p>
+    </div>
+
+    <v-card class="panel-card" flat>
+      <v-card-title class="panel-title d-flex align-center flex-wrap">
+        Grades List
 
         <v-spacer />
 
@@ -19,18 +22,14 @@
           outlined
           dense
           hide-details
-          class="mr-4"
-          style="max-width: 300px"
+          class="dark-field mr-4"
+          style="max-width: 280px"
         />
 
-        <v-btn
-          color="success"
-          @click="openCreateDialog"
-        >
-          <v-icon left>
+        <v-btn class="create-btn" @click="openCreateDialog">
+          <v-icon left size="18">
             mdi-plus
           </v-icon>
-
           Add Grade
         </v-btn>
       </v-card-title>
@@ -40,53 +39,39 @@
         :items="grades"
         :search="search"
         :loading="loading"
+        class="dark-table"
       >
         <template #item.is_active="{ item }">
-          <v-chip
-            small
-            :color="item.is_active ? 'success' : 'error'"
-            dark
-          >
+          <v-chip small :class="item.is_active ? 'chip-green' : 'chip-red'">
             {{ item.is_active ? 'Active' : 'Inactive' }}
           </v-chip>
         </template>
 
         <template #item.actions="{ item }">
-          <v-btn
-            small
-            color="primary"
-            class="mr-2"
-            @click="viewSubjects(item)"
-          >
+          <v-btn small class="subjects-btn mr-2" @click="viewSubjects(item)">
             Subjects
           </v-btn>
 
-          <v-btn
-            small
-            color="warning"
-            class="mr-2"
-            @click="editGrade(item)"
-          >
+          <v-btn small class="edit-btn mr-2" @click="editGrade(item)">
             Edit
           </v-btn>
 
-          <v-btn
-            small
-            color="error"
-            @click="deleteGrade(item)"
-          >
+          <v-btn small class="delete-btn" @click="deleteGrade(item)">
             Delete
           </v-btn>
+        </template>
+
+        <template #no-data>
+          <div class="text-center pa-8 empty-text">
+            No grades found
+          </div>
         </template>
       </v-data-table>
     </v-card>
 
-    <v-dialog
-      v-model="createDialog"
-      max-width="600"
-    >
-      <v-card>
-        <v-card-title>
+    <v-dialog v-model="createDialog" max-width="600">
+      <v-card class="dialog-card">
+        <v-card-title class="dialog-title">
           {{ form.id ? 'Edit Grade' : 'Create Grade' }}
         </v-card-title>
 
@@ -96,6 +81,7 @@
             label="Grade Name"
             outlined
             required
+            class="dark-field mt-4"
           />
 
           <v-select
@@ -104,6 +90,7 @@
             label="Category"
             outlined
             required
+            class="dark-field"
           />
 
           <v-text-field
@@ -111,29 +98,25 @@
             type="number"
             label="Sort Order"
             outlined
+            class="dark-field"
           />
 
           <v-switch
             v-model="form.is_active"
             label="Active"
+            color="#22D3EE"
+            class="dark-switch"
           />
         </v-card-text>
 
-        <v-card-actions>
+        <v-card-actions class="dialog-actions">
           <v-spacer />
 
-          <v-btn
-            text
-            @click="createDialog = false"
-          >
+          <v-btn text class="cancel-btn" @click="createDialog = false">
             Cancel
           </v-btn>
 
-          <v-btn
-            color="primary"
-            :loading="saving"
-            @click="saveGrade"
-          >
+          <v-btn class="save-btn" :loading="saving" @click="saveGrade">
             Save
           </v-btn>
         </v-card-actions>
@@ -190,7 +173,7 @@ export default {
       try {
         this.loading = true
 
-        const response = await this.$axios.get('/grades')
+        const response = await this.$axios.get('/admin/grades')
 
         this.grades = response.data.data
       } catch (error) {
@@ -228,7 +211,6 @@ export default {
     },
 
     async saveGrade () {
-      // Validation
       if (!this.form.name || !this.form.name.trim()) {
         alert('Grade name is required')
         return
@@ -261,7 +243,6 @@ export default {
       } catch (error) {
         console.error('Failed to save grade:', error)
 
-        // Show specific error message if available
         if (error.response?.data?.message) {
           alert(error.response.data.message)
         } else {
@@ -284,7 +265,6 @@ export default {
       } catch (error) {
         console.error('Failed to delete grade:', error)
 
-        // Show specific error message if available (e.g., grade has subjects)
         if (error.response?.data?.message) {
           alert(error.response.data.message)
         } else {
@@ -295,3 +275,141 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.page-title {
+  color: #F1F5F9;
+  font-family: 'Sora', 'Poppins', sans-serif;
+  font-weight: 700;
+  font-size: 24px;
+  margin: 0;
+}
+.page-subtitle {
+  color: #94A3B8;
+  font-size: 13.5px;
+  margin: 4px 0 0;
+}
+
+.panel-card {
+  background: rgba(17, 25, 45, 0.72) !important;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 14px;
+}
+.panel-title {
+  color: #F1F5F9;
+  font-family: 'Sora', 'Poppins', sans-serif;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.create-btn {
+  background: linear-gradient(90deg, #22D3EE, #6366F1) !important;
+  color: #0B1120 !important;
+  font-weight: 700;
+  text-transform: none;
+  box-shadow: none !important;
+}
+
+.dark-field ::v-deep .v-input__control .v-input__slot {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border-radius: 8px;
+}
+.dark-field ::v-deep fieldset {
+  border-color: rgba(148, 163, 184, 0.25) !important;
+}
+.dark-field ::v-deep input,
+.dark-field ::v-deep .v-select__selection
+{
+  color: #F1F5F9 !important;
+}
+.dark-field ::v-deep .v-label {
+  color: #94A3B8 !important;
+}
+.dark-field.v-input--is-focused ::v-deep fieldset {
+  border-color: #22D3EE !important;
+}
+.dark-field ::v-deep .v-icon {
+  color: #64748B !important;
+}
+
+.dark-switch ::v-deep label {
+  color: #CBD5E1 !important;
+}
+
+.dark-table {
+  background: transparent !important;
+}
+.dark-table ::v-deep table {
+  background: transparent;
+}
+.dark-table ::v-deep th {
+  background: rgba(148, 163, 184, 0.05) !important;
+  color: #94A3B8 !important;
+  font-size: 11.5px !important;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14) !important;
+}
+.dark-table ::v-deep td {
+  color: #E2E8F0 !important;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.08) !important;
+  font-size: 13.5px;
+}
+.dark-table ::v-deep tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+.dark-table ::v-deep .v-data-footer {
+  color: #94A3B8 !important;
+  border-top: 1px solid rgba(148, 163, 184, 0.12) !important;
+}
+
+.empty-text {
+  color: #64748B;
+}
+
+.chip-green { background: rgba(52, 211, 153, 0.16) !important; color: #34D399 !important; }
+.chip-red { background: rgba(248, 113, 113, 0.16) !important; color: #F87171 !important; }
+
+.subjects-btn {
+  background: rgba(34, 211, 238, 0.12) !important;
+  color: #22D3EE !important;
+  text-transform: none;
+  box-shadow: none !important;
+}
+.edit-btn {
+  background: rgba(245, 158, 11, 0.12) !important;
+  color: #F59E0B !important;
+  text-transform: none;
+  box-shadow: none !important;
+}
+.delete-btn {
+  background: rgba(248, 113, 113, 0.12) !important;
+  color: #F87171 !important;
+  text-transform: none;
+  box-shadow: none !important;
+}
+
+.dialog-card {
+  background: #0F1729 !important;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+}
+.dialog-title {
+  color: #F1F5F9;
+  font-family: 'Sora', 'Poppins', sans-serif;
+  font-weight: 700;
+}
+.dialog-actions {
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+  padding-top: 12px;
+}
+.cancel-btn {
+  color: #94A3B8 !important;
+  text-transform: none;
+}
+.save-btn {
+  background: linear-gradient(90deg, #22D3EE, #6366F1) !important;
+  color: #0B1120 !important;
+  font-weight: 700;
+  text-transform: none;
+}
+</style>
