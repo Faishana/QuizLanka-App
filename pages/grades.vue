@@ -185,7 +185,7 @@ export default {
     },
 
     viewSubjects (grade) {
-      this.$router.push(`/subjects?grade=${grade.id}`)
+      this.$router.push(`/admin/subjects?grade=${grade.id}`)
     },
 
     openCreateDialog () {
@@ -226,13 +226,13 @@ export default {
       try {
         if (this.form.id) {
           await this.$axios.put(
-            `/grades/${this.form.id}`,
+            `/admin/grades/${this.form.id}`,
             this.form
           )
           alert('Grade updated successfully')
         } else {
           await this.$axios.post(
-            '/grades',
+            '/admin/grades',
             this.form
           )
           alert('Grade created successfully')
@@ -259,7 +259,7 @@ export default {
       }
 
       try {
-        await this.$axios.delete(`/grades/${grade.id}`)
+        await this.$axios.delete(`/admin/grades/${grade.id}`)
         alert('Grade deleted successfully')
         await this.loadGrades()
       } catch (error) {
