@@ -93,14 +93,6 @@
             class="dark-field"
           />
 
-          <v-text-field
-            v-model.number="form.sort_order"
-            type="number"
-            label="Sort Order"
-            outlined
-            class="dark-field"
-          />
-
           <v-switch
             v-model="form.is_active"
             label="Active"
@@ -157,7 +149,7 @@ export default {
         { text: 'ID', value: 'id' },
         { text: 'Name', value: 'name' },
         { text: 'Category', value: 'category' },
-        { text: 'Sort Order', value: 'sort_order' },
+
         { text: 'Status', value: 'is_active' },
         { text: 'Actions', value: 'actions', sortable: false }
       ]
