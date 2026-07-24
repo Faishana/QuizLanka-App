@@ -194,7 +194,6 @@
             label="Grade"
             outlined
             class="dark-field"
-            @change="loadSubjectsByGradeForEdit"
           />
 
           <v-select
@@ -205,8 +204,6 @@
             label="Subject"
             outlined
             class="dark-field"
-            :disabled="!editForm.grade_id"
-            :loading="subjectsLoading"
           />
         </v-card-text>
 
@@ -275,7 +272,6 @@
             outlined
             required
             class="dark-field"
-            @change="loadSubjectsByGradeForUpload"
           />
 
           <v-select
@@ -287,8 +283,6 @@
             outlined
             required
             class="dark-field"
-            :disabled="!uploadForm.grade_id"
-            :loading="subjectsLoading"
           />
 
           <v-select
@@ -387,6 +381,7 @@ export default {
   mounted () {
     this.loadMaterials()
     this.loadGrades()
+    this.loadSubjects()
 
     // Auto-refresh every 5 seconds only if there are pending materials
     this.interval = setInterval(() => {
@@ -433,38 +428,11 @@ export default {
       }
     },
 
-    async loadSubjectsByGradeForUpload (gradeId) {
-      if (!gradeId) {
-        this.subjects = []
-        this.uploadForm.subject_id = null
-        return
-      }
-
+    async loadSubjects () {
       try {
         this.subjectsLoading = true
-        const response = await this.$axios.get(`/admin/subjects/grade/${gradeId}`)
+        const response = await this.$axios.get('/admin/subjects')
         this.subjects = response.data.data || response.data
-        this.uploadForm.subject_id = null
-      } catch (error) {
-        console.error('Failed to load subjects', error)
-        this.$toast?.error('Failed to load subjects') || alert('Failed to load subjects')
-      } finally {
-        this.subjectsLoading = false
-      }
-    },
-
-    async loadSubjectsByGradeForEdit (gradeId) {
-      if (!gradeId) {
-        this.subjects = []
-        this.editForm.subject_id = null
-        return
-      }
-
-      try {
-        this.subjectsLoading = true
-        const response = await this.$axios.get(`/admin/subjects/grade/${gradeId}`)
-        this.subjects = response.data.data || response.data
-        this.editForm.subject_id = null
       } catch (error) {
         console.error('Failed to load subjects', error)
         this.$toast?.error('Failed to load subjects') || alert('Failed to load subjects')
@@ -504,7 +472,6 @@ export default {
         material_type: 'lesson',
         file: null
       }
-      this.subjects = []
       this.uploadDialog = true
     },
 
@@ -517,7 +484,6 @@ export default {
         material_type: 'lesson',
         file: null
       }
-      this.subjects = []
     },
 
     editMaterial (material) {
@@ -528,7 +494,6 @@ export default {
         subject_id: material.subject_id
       }
 
-      this.loadSubjectsByGradeForEdit(material.grade_id)
       this.editDialog = true
     },
 
