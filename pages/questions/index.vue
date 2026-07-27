@@ -403,21 +403,23 @@ export default {
   methods: {
     async loadLookupData () {
       try {
-        const gradesResponse = await this.$axios.get('/grades', {
-          params: { per_page: 100 }
-        })
+        // Changed to use public endpoints
+        const gradesResponse = await this.$axios.get('/public/grades')
         if (gradesResponse.data.success) {
           this.grades = gradesResponse.data.data || []
         }
 
-        const subjectsResponse = await this.$axios.get('/subjects', {
-          params: { per_page: 100 }
-        })
+        const subjectsResponse = await this.$axios.get('/public/subjects')
         if (subjectsResponse.data.success) {
           this.subjects = subjectsResponse.data.data || []
         }
       } catch (error) {
         console.error('Failed to load lookup data:', error)
+        if (this.$toast) {
+          this.$toast.error('Failed to load grades and subjects')
+        } else {
+          alert('Failed to load grades and subjects')
+        }
       }
     },
 
@@ -497,7 +499,8 @@ export default {
       try {
         this.loading = true
 
-        const response = await this.$axios.get(`/questions/${question.id}`)
+        // Changed to use admin prefix
+        const response = await this.$axios.get(`/admin/questions/${question.id}`)
 
         if (response.data.success) {
           const questionData = response.data.data
@@ -568,14 +571,18 @@ export default {
           }))
         }
 
+        // Changed to use admin prefix
         const response = await this.$axios.put(
-          `/questions/${this.editForm.id}`,
+          `/admin/questions/${this.editForm.id}`,
           payload
         )
 
         if (response.data.success) {
-          this.$toast?.success(response.data.message || 'Question updated successfully') ||
+          if (this.$toast) {
+            this.$toast.success(response.data.message || 'Question updated successfully')
+          } else {
             alert('Question updated successfully')
+          }
           this.closeEditDialog()
           await this.loadQuestions()
         } else {
@@ -585,9 +592,15 @@ export default {
         console.error('Failed to update question:', error)
 
         if (error.response?.data?.message) {
-          this.$toast?.error(error.response.data.message) || alert(error.response.data.message)
+          if (this.$toast) {
+            this.$toast.error(error.response.data.message)
+          } else {
+            alert(error.response.data.message)
+          }
+        } else if (this.$toast) {
+          this.$toast.error('Failed to update question')
         } else {
-          this.$toast?.error('Failed to update question') || alert('Failed to update question')
+          alert('Failed to update question')
         }
       } finally {
         this.saving = false
@@ -605,7 +618,8 @@ export default {
       this.deleting = true
 
       try {
-        const response = await this.$axios.delete(`/questions/${this.questionToDelete.id}`)
+        // Changed to use admin prefix
+        const response = await this.$axios.delete(`/admin/questions/${this.questionToDelete.id}`)
 
         if (response.data.success) {
           this.$toast?.success(response.data.message || 'Question deleted successfully') ||
