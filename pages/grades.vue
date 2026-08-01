@@ -156,8 +156,14 @@ export default {
     }
   },
 
-  mounted () {
-    this.loadGrades()
+  async mounted () {
+    await this.$nextTick()
+
+    if (!this.$store.state.auth.token) {
+      return
+    }
+
+    await this.loadGrades()
   },
 
   methods: {

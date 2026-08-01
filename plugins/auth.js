@@ -1,6 +1,13 @@
 export default ({ store }) => {
-  const token = localStorage.getItem('token')
-  const user = localStorage.getItem('user')
+  if (!process.client) { return }
+
+  const token =
+    localStorage.getItem('token') ||
+    sessionStorage.getItem('token')
+
+  const user =
+    localStorage.getItem('user') ||
+    sessionStorage.getItem('user')
 
   if (token) {
     store.commit('auth/SET_TOKEN', token)
