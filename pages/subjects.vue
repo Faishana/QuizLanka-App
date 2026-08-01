@@ -29,6 +29,19 @@
         :loading="loading"
         class="dark-table"
       >
+        <template #item.icon="{ item }">
+          <v-avatar size="42" tile>
+            <v-img
+              v-if="item.icon"
+              :src="item.icon"
+              contain
+            />
+            <v-icon v-else>
+              mdi-book-open-page-variant
+            </v-icon>
+          </v-avatar>
+        </template>
+
         <template #item.color="{ item }">
           <span class="color-swatch">
             <span class="color-dot" :style="{ background: item.color }" />
@@ -95,12 +108,23 @@
             </template>
           </v-text-field>
 
-          <v-textarea
-            v-model="form.description"
-            label="Description"
+          <v-file-input
+            v-model="form.icon"
+            label="Subject Icon"
+            accept="image/png,image/svg+xml,image/jpeg,image/webp"
+            prepend-icon="mdi-image"
             outlined
             class="dark-field"
           />
+
+          <div v-if="previewImage" class="text-center mt-3">
+            <v-img
+              :src="previewImage"
+              max-width="80"
+              max-height="80"
+              contain
+            />
+          </div>
         </v-card-text>
 
         <v-card-actions class="dialog-actions">
@@ -131,23 +155,36 @@ export default {
 
       subjects: [],
       grades: [],
+      previewImage: null,
 
       form: {
         id: null,
         grade_id: null,
         name: '',
         color: '#3B82F6',
-        description: ''
+        description: '',
+        icon: null
       },
 
       headers: [
         { text: 'ID', value: 'id' },
+        { text: 'Icon', value: 'icon', sortable: false },
         { text: 'Name', value: 'name' },
         { text: 'Slug', value: 'slug' },
         { text: 'Color', value: 'color' },
         { text: 'Status', value: 'is_active' },
         { text: 'Actions', value: 'actions', sortable: false }
       ]
+    }
+  },
+
+  watch: {
+    'form.icon' (file) {
+      if (file instanceof File) {
+        this.previewImage = URL.createObjectURL(file)
+      } else {
+        this.previewImage = null
+      }
     }
   },
 
@@ -208,13 +245,15 @@ export default {
 
     openCreateDialog () {
       this.isEdit = false
+      this.previewImage = null
 
       this.form = {
         id: null,
         grade_id: null,
         name: '',
         color: '#3B82F6',
-        description: ''
+        description: '',
+        icon: null
       }
 
       this.dialog = true
@@ -222,9 +261,11 @@ export default {
 
     editSubject (subject) {
       this.isEdit = true
+      this.previewImage = subject.icon || null
 
       this.form = {
-        ...subject
+        ...subject,
+        icon: null // Reset icon to null, will be set if user uploads new one
       }
 
       this.dialog = true
@@ -232,19 +273,33 @@ export default {
 
     async saveSubject () {
       try {
+        const formData = new FormData()
+
+        formData.append('grade_id', this.form.grade_id)
+        formData.append('name', this.form.name)
+        formData.append('color', this.form.color)
+        formData.append('description', this.form.description || '')
+
+        if (this.form.icon instanceof File) {
+          formData.append('icon', this.form.icon)
+        }
+
         if (this.isEdit) {
-          await this.$axios.put(
+          formData.append('_method', 'PUT')
+
+          await this.$axios.post(
             `/admin/subjects/${this.form.id}`,
-            this.form
+            formData
           )
         } else {
           await this.$axios.post(
             '/admin/subjects',
-            this.form
+            formData
           )
         }
 
         this.dialog = false
+        this.previewImage = null
 
         await this.loadSubjects()
       } catch (error) {
