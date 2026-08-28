@@ -45,6 +45,7 @@ export default {
 
   axios: {
     baseURL: 'https://quizlanka.lk/api'
+    //baseURL: 'http://127.0.0.1:8000/api'
   },
 
   vuetify: {

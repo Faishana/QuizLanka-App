@@ -59,6 +59,12 @@
           </v-chip>
         </template>
 
+        <template v-slot:item.medium="{ item }">
+          <v-chip small class="chip-violet">
+            {{ getMediumLabel(item.medium) }}
+          </v-chip>
+        </template>
+
         <template v-slot:item.questions_count="{ item }">
           <v-chip small class="chip-cyan">
             {{ item.questions_count || 0 }}
@@ -139,6 +145,12 @@
           <p><strong class="detail-key">Grade:</strong> {{ selectedMaterial.grade_name || selectedMaterial.grade?.name || 'N/A' }}</p>
           <p><strong class="detail-key">Subject:</strong> {{ selectedMaterial.subject_name || selectedMaterial.subject?.name || 'N/A' }}</p>
           <p>
+            <strong class="detail-key">Medium:</strong>
+            <v-chip small class="chip-violet">
+              {{ getMediumLabel(selectedMaterial.medium) }}
+            </v-chip>
+          </p>
+          <p>
             <strong class="detail-key">Status:</strong>
             <v-chip small :class="getStatusClass(selectedMaterial.processing_status)">
               {{ getStatusLabel(selectedMaterial.processing_status) }}
@@ -202,6 +214,16 @@
             item-text="name"
             item-value="id"
             label="Subject"
+            outlined
+            class="dark-field"
+          />
+
+          <v-select
+            v-model="editForm.medium"
+            :items="mediums"
+            item-text="label"
+            item-value="value"
+            label="Medium"
             outlined
             class="dark-field"
           />
@@ -286,6 +308,17 @@
           />
 
           <v-select
+            v-model="uploadForm.medium"
+            :items="mediums"
+            item-text="label"
+            item-value="value"
+            label="Medium"
+            outlined
+            required
+            class="dark-field"
+          />
+
+          <v-select
             v-model="uploadForm.material_type"
             :items="materialTypes"
             item-text="label"
@@ -346,6 +379,12 @@ export default {
       deleteDialog: false,
       materialToDelete: null,
 
+      mediums: [
+        { label: '🇱🇰 Sinhala Medium', value: 'si' },
+        { label: '🇬🇧 English Medium', value: 'en' },
+        { label: 'தமிழ் Tamil Medium', value: 'ta' }
+      ],
+
       materialTypes: [
         { label: '📘 Lesson Material', value: 'lesson' },
         { label: '📄 Past Paper', value: 'past_paper' }
@@ -355,13 +394,15 @@ export default {
         id: null,
         title: '',
         grade_id: null,
-        subject_id: null
+        subject_id: null,
+        medium: null
       },
 
       uploadForm: {
         title: '',
         grade_id: null,
         subject_id: null,
+        medium: 'si',
         material_type: 'lesson',
         file: null
       },
@@ -370,6 +411,7 @@ export default {
         { text: 'ID', value: 'id', sortable: true },
         { text: 'Title', value: 'title', sortable: true },
         { text: 'Type', value: 'material_type', sortable: true },
+        { text: 'Medium', value: 'medium', sortable: true },
         { text: 'Questions', value: 'questions_count', sortable: true },
         { text: 'Status', value: 'processing_status', sortable: true },
         { text: 'Created', value: 'created_at', sortable: true },
@@ -452,6 +494,7 @@ export default {
           subject_name: materialData.subject?.name || materialData.subject_name || materialData.subject,
           title: materialData.title,
           material_type: materialData.material_type,
+          medium: materialData.medium,
           processing_status: materialData.processing_status,
           extracted_text_preview: materialData.extracted_text_preview,
           questions_count: materialData.questions_count || 0,
@@ -469,6 +512,7 @@ export default {
         title: '',
         grade_id: null,
         subject_id: null,
+        medium: 'si',
         material_type: 'lesson',
         file: null
       }
@@ -481,6 +525,7 @@ export default {
         title: '',
         grade_id: null,
         subject_id: null,
+        medium: 'si',
         material_type: 'lesson',
         file: null
       }
@@ -491,7 +536,8 @@ export default {
         id: material.id,
         title: material.title,
         grade_id: material.grade_id,
-        subject_id: material.subject_id
+        subject_id: material.subject_id,
+        medium: material.medium
       }
 
       this.editDialog = true
@@ -513,13 +559,19 @@ export default {
         return
       }
 
+      if (!this.editForm.medium) {
+        this.$toast?.error('Medium is required') || alert('Medium is required')
+        return
+      }
+
       this.saving = true
 
       try {
         await this.$axios.put(`/admin/materials/${this.editForm.id}`, {
           title: this.editForm.title,
           grade_id: this.editForm.grade_id,
-          subject_id: this.editForm.subject_id
+          subject_id: this.editForm.subject_id,
+          medium: this.editForm.medium
         })
 
         this.$toast?.success('Material updated successfully') || alert('Material updated successfully')
@@ -572,6 +624,11 @@ export default {
         return
       }
 
+      if (!this.uploadForm.medium) {
+        this.$toast?.error('Medium is required') || alert('Medium is required')
+        return
+      }
+
       if (!this.uploadForm.material_type) {
         this.$toast?.error('Material type is required') || alert('Material type is required')
         return
@@ -588,6 +645,7 @@ export default {
         const formData = new FormData()
         formData.append('grade_id', this.uploadForm.grade_id)
         formData.append('subject_id', this.uploadForm.subject_id)
+        formData.append('medium', this.uploadForm.medium)
         formData.append('title', this.uploadForm.title)
         formData.append('material_type', this.uploadForm.material_type)
 
@@ -613,6 +671,15 @@ export default {
       } finally {
         this.uploading = false
       }
+    },
+
+    getMediumLabel (medium) {
+      const labels = {
+        si: '🇱🇰 Sinhala',
+        en: '🇬🇧 English',
+        ta: 'தமிழ் Tamil'
+      }
+      return labels[medium] || medium || 'N/A'
     },
 
     getStatusClass (status) {
@@ -746,6 +813,7 @@ export default {
 .chip-green { background: rgba(52, 211, 153, 0.16) !important; color: #34D399 !important; }
 .chip-amber { background: rgba(245, 158, 11, 0.16) !important; color: #F59E0B !important; }
 .chip-red { background: rgba(248, 113, 113, 0.16) !important; color: #F87171 !important; }
+.chip-violet { background: rgba(139, 92, 246, 0.14) !important; color: #A78BFA !important; }
 
 .view-btn {
   background: rgba(34, 211, 238, 0.12) !important;
