@@ -48,9 +48,11 @@
 
           <v-col cols="12" md="3">
             <v-select
-              v-model="filters.difficulty"
-              :items="difficultyOptions"
-              label="Difficulty"
+              v-model="filters.medium"
+              :items="mediumOptions"
+              item-text="text"
+              item-value="value"
+              label="Medium"
               dense
               outlined
               clearable
@@ -61,6 +63,24 @@
           </v-col>
 
           <v-col cols="12" md="3">
+            <v-select
+              v-model="filters.difficulty"
+              :items="difficultyOptions"
+              item-text="text"
+              item-value="value"
+              label="Difficulty"
+              dense
+              outlined
+              clearable
+              hide-details
+              class="dark-field"
+              @change="applyFilters"
+            />
+          </v-col>
+        </v-row>
+
+        <v-row>
+          <v-col cols="12" md="6">
             <v-text-field
               v-model="search"
               append-icon="mdi-magnify"
@@ -129,6 +149,12 @@
           </v-chip>
         </template>
 
+        <template #item.medium="{ item }">
+          <v-chip small class="chip-medium">
+            {{ getMediumLabel(item.quiz_language) }}
+          </v-chip>
+        </template>
+
         <template #item.difficulty="{ item }">
           <v-chip small :class="getDifficultyClass(item.difficulty)">
             {{ item.difficulty }}
@@ -189,7 +215,20 @@
           />
 
           <v-row>
-            <v-col cols="12" md="6">
+            <v-col cols="12" md="4">
+              <v-select
+                v-model="editForm.medium"
+                :items="mediumOptions"
+                item-text="text"
+                item-value="value"
+                label="Medium"
+                outlined
+                dense
+                class="dark-field"
+              />
+            </v-col>
+
+            <v-col cols="12" md="4">
               <v-select
                 v-model="editForm.difficulty"
                 :items="difficultyOptions"
@@ -202,7 +241,7 @@
               />
             </v-col>
 
-            <v-col cols="12" md="6">
+            <v-col cols="12" md="4">
               <v-select
                 v-model="editForm.correct_answer"
                 :items="['A', 'B', 'C', 'D']"
@@ -332,6 +371,7 @@ export default {
       filters: {
         grade_id: null,
         subject_id: null,
+        medium: null,
         difficulty: null
       },
 
@@ -355,6 +395,12 @@ export default {
       deleteDialog: false,
       questionToDelete: null,
 
+      mediumOptions: [
+        { text: 'Sinhala Medium', value: 'si' },
+        { text: 'English Medium', value: 'en' },
+        { text: 'Tamil Medium', value: 'ta' }
+      ],
+
       difficultyOptions: [
         { text: 'Easy', value: 'easy' },
         { text: 'Medium', value: 'medium' },
@@ -365,6 +411,7 @@ export default {
         id: null,
         question_text: '',
         correct_answer: '',
+        medium: 'si',
         difficulty: 'medium',
         explanation: '',
         options: []
@@ -376,6 +423,7 @@ export default {
         { text: 'Correct Answer', value: 'correct_answer_display', sortable: false, width: '150' },
         { text: 'Grade', value: 'grade', width: '100' },
         { text: 'Subject', value: 'subject', width: '120' },
+        { text: 'Medium', value: 'medium', width: '120' },
         { text: 'Difficulty', value: 'difficulty', width: '100', sortable: true },
         { text: 'Actions', value: 'actions', sortable: false, width: '200' }
       ]
@@ -447,6 +495,9 @@ export default {
         if (this.filters.subject_id) {
           params.subject_id = this.filters.subject_id
         }
+        if (this.filters.medium) {
+          params.medium = this.filters.medium
+        }
         if (this.filters.difficulty) {
           params.difficulty = this.filters.difficulty
         }
@@ -509,6 +560,7 @@ export default {
             id: questionData.id,
             question_text: questionData.question_text || '',
             correct_answer: questionData.correct_answer || '',
+            medium: questionData.quiz_language || 'si',
             difficulty: questionData.difficulty || 'medium',
             explanation: questionData.explanation || '',
             options: questionData.options || []
@@ -563,6 +615,7 @@ export default {
         const payload = {
           question_text: this.editForm.question_text,
           correct_answer: this.editForm.correct_answer,
+          quiz_language: this.editForm.medium,
           difficulty: this.editForm.difficulty,
           explanation: this.editForm.explanation || null,
           options: this.editForm.options.map(option => ({
@@ -649,10 +702,16 @@ export default {
         id: null,
         question_text: '',
         correct_answer: '',
+        medium: 'si',
         difficulty: 'medium',
         explanation: '',
         options: []
       }
+    },
+
+    getMediumLabel (value) {
+      const medium = this.mediumOptions.find(m => m.value === value)
+      return medium ? medium.text : value || 'N/A'
     },
 
     truncateText (text, length) {
@@ -782,6 +841,7 @@ export default {
 .chip-neutral { background: rgba(148, 163, 184, 0.14) !important; color: #E2E8F0 !important; }
 .chip-cyan { background: rgba(34, 211, 238, 0.14) !important; color: #22D3EE !important; }
 .chip-violet { background: rgba(139, 92, 246, 0.16) !important; color: #A78BFA !important; }
+.chip-medium { background: rgba(52, 211, 153, 0.16) !important; color: #34D399 !important; }
 .chip-green { background: rgba(52, 211, 153, 0.16) !important; color: #34D399 !important; }
 .chip-amber { background: rgba(245, 158, 11, 0.16) !important; color: #F59E0B !important; }
 .chip-red { background: rgba(248, 113, 113, 0.16) !important; color: #F87171 !important; }
