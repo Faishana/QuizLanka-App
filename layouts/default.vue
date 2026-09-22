@@ -19,7 +19,10 @@
 
       <v-list dense nav class="pt-2">
         <template v-for="section in navSections">
-          <v-subheader :key="section.title" class="section-heading">
+          <v-subheader
+            :key="section.title + '-header'"
+            class="section-heading"
+          >
             {{ section.title }}
           </v-subheader>
 
@@ -27,6 +30,7 @@
             v-for="item in section.items"
             :key="item.to"
             :to="item.to"
+            exact
             class="nav-item"
             active-class="nav-item--active"
           >
@@ -41,7 +45,10 @@
             </v-list-item-title>
           </v-list-item>
 
-          <v-divider :key="section.title + '-div'" class="drawer-divider my-2" />
+          <v-divider
+            :key="section.title + '-div'"
+            class="drawer-divider my-2"
+          />
         </template>
       </v-list>
     </v-navigation-drawer>
@@ -110,8 +117,21 @@ export default {
         {
           title: 'CONTENT',
           items: [
-            { title: 'Materials', to: '/materials', icon: 'mdi-file-pdf-box' },
-            { title: 'Questions', to: '/questions', icon: 'mdi-help-circle-outline' }
+            {
+              title: 'Materials',
+              to: '/materials',
+              icon: 'mdi-file-pdf-box'
+            },
+            {
+              title: 'Questions',
+              to: '/questions',
+              icon: 'mdi-help-circle-outline'
+            },
+            {
+              title: 'Past Paper Entry',
+              to: '/questions/past-paper',
+              icon: 'mdi-file-document-edit-outline'
+            }
           ]
         },
         {
@@ -126,7 +146,11 @@ export default {
 
   computed: {
     adminName () {
-      return this.$store.state.auth.user?.name || 'Admin'
+      return (
+        (this.$store.state.auth.user &&
+          this.$store.state.auth.user.name) ||
+        'Admin'
+      )
     }
   },
 
