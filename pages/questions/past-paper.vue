@@ -107,6 +107,35 @@
               />
             </v-col>
 
+            <!-- Stream (only for A/L) -->
+            <v-col
+              v-if="isAlGrade"
+              cols="12"
+              md="3"
+            >
+              <v-select
+                v-model="paper.al_stream"
+                :items="streamOptions"
+                item-text="text"
+                item-value="value"
+                label="A/L Stream"
+                outlined
+                dense
+                hide-details
+                class="dark-field"
+              >
+                <template #prepend-inner>
+                  <v-icon
+                    small
+                    color="#8B5CF6"
+                    class="mr-1"
+                  >
+                    mdi-source-branch
+                  </v-icon>
+                </template>
+              </v-select>
+            </v-col>
+
             <!-- Subject -->
             <v-col
               cols="12"
@@ -123,6 +152,9 @@
                 hide-details
                 class="dark-field"
                 :loading="loadingSubjects"
+                :disabled="!canSelectSubject"
+                :hint="subjectHint"
+                :persistent-hint="!canSelectSubject"
               />
             </v-col>
 
@@ -145,7 +177,7 @@
             <!-- Medium -->
             <v-col
               cols="12"
-              md="3"
+              :md="isAlGrade ? 4 : 3"
             >
               <v-select
                 v-model="paper.medium"
@@ -163,7 +195,7 @@
             <!-- Paper Name -->
             <v-col
               cols="12"
-              md="8"
+              :md="isAlGrade ? 8 : 9"
             >
               <v-text-field
                 v-model="paper.title"
@@ -176,10 +208,28 @@
               />
             </v-col>
 
+            <!-- Paper Number -->
+            <v-col
+              cols="12"
+              md="3"
+            >
+              <v-text-field
+                v-model.number="paper.paper_number"
+                type="number"
+                label="Paper Number"
+                placeholder="Example: 1"
+                outlined
+                dense
+                hide-details
+                class="dark-field"
+                min="1"
+              />
+            </v-col>
+
             <!-- Total Questions -->
             <v-col
               cols="12"
-              md="4"
+              md="3"
             >
               <v-text-field
                 v-model.number="paper.total_questions"
@@ -392,16 +442,10 @@
 
           <v-row>
             <!-- Option A -->
-            <v-col
-              cols="12"
-              md="6"
-            >
+            <v-col cols="12" md="6">
               <div class="option-wrapper">
                 <div class="option-label">
-                  <span class="option-letter">
-                    A
-                  </span>
-
+                  <span class="option-letter">A</span>
                   <span>Option A</span>
                 </div>
 
@@ -417,16 +461,10 @@
             </v-col>
 
             <!-- Option B -->
-            <v-col
-              cols="12"
-              md="6"
-            >
+            <v-col cols="12" md="6">
               <div class="option-wrapper">
                 <div class="option-label">
-                  <span class="option-letter">
-                    B
-                  </span>
-
+                  <span class="option-letter">B</span>
                   <span>Option B</span>
                 </div>
 
@@ -442,16 +480,10 @@
             </v-col>
 
             <!-- Option C -->
-            <v-col
-              cols="12"
-              md="6"
-            >
+            <v-col cols="12" md="6">
               <div class="option-wrapper">
                 <div class="option-label">
-                  <span class="option-letter">
-                    C
-                  </span>
-
+                  <span class="option-letter">C</span>
                   <span>Option C</span>
                 </div>
 
@@ -467,16 +499,10 @@
             </v-col>
 
             <!-- Option D -->
-            <v-col
-              cols="12"
-              md="6"
-            >
+            <v-col cols="12" md="6">
               <div class="option-wrapper">
                 <div class="option-label">
-                  <span class="option-letter">
-                    D
-                  </span>
-
+                  <span class="option-letter">D</span>
                   <span>Option D</span>
                 </div>
 
@@ -497,10 +523,7 @@
           ========================== -->
           <v-row class="mt-2">
             <!-- Correct Answer -->
-            <v-col
-              cols="12"
-              md="4"
-            >
+            <v-col cols="12" md="4">
               <div class="field-label">
                 Correct Answer
                 <span class="required">*</span>
@@ -517,35 +540,22 @@
               >
                 <template #selection="{ item }">
                   <div class="d-flex align-center">
-                    <span class="answer-badge">
-                      {{ item }}
-                    </span>
-
-                    <span class="ml-2">
-                      Option {{ item }}
-                    </span>
+                    <span class="answer-badge">{{ item }}</span>
+                    <span class="ml-2">Option {{ item }}</span>
                   </div>
                 </template>
 
                 <template #item="{ item }">
                   <div class="d-flex align-center">
-                    <span class="answer-badge">
-                      {{ item }}
-                    </span>
-
-                    <span class="ml-2">
-                      Option {{ item }}
-                    </span>
+                    <span class="answer-badge">{{ item }}</span>
+                    <span class="ml-2">Option {{ item }}</span>
                   </div>
                 </template>
               </v-select>
             </v-col>
 
             <!-- Difficulty -->
-            <v-col
-              cols="12"
-              md="4"
-            >
+            <v-col cols="12" md="4">
               <div class="field-label">
                 Difficulty
               </div>
@@ -568,10 +578,7 @@
           ========================== -->
           <div class="field-label explanation-label">
             Explanation
-
-            <span class="optional">
-              Optional
-            </span>
+            <span class="optional">Optional</span>
           </div>
 
           <v-textarea
@@ -598,7 +605,6 @@
             <v-icon left size="18">
               mdi-refresh
             </v-icon>
-
             Clear
           </v-btn>
 
@@ -613,8 +619,7 @@
             <v-icon left size="18">
               mdi-content-save-outline
             </v-icon>
-
-            {{ editMode ? 'Save & Finish' : 'Save & Finish' }}
+            Save & Finish
           </v-btn>
 
           <v-btn
@@ -626,7 +631,6 @@
             <v-icon left size="18">
               mdi-arrow-right
             </v-icon>
-
             Save & Add Next
           </v-btn>
         </v-card-actions>
@@ -641,11 +645,7 @@
         flat
       >
         <v-card-title class="panel-title">
-          <v-icon
-            left
-            color="#22D3EE"
-            size="22"
-          >
+          <v-icon left color="#22D3EE" size="22">
             mdi-format-list-numbered
           </v-icon>
 
@@ -653,10 +653,7 @@
 
           <v-spacer />
 
-          <v-chip
-            small
-            class="count-chip"
-          >
+          <v-chip small class="count-chip">
             {{ questions.length }} Questions
           </v-chip>
         </v-card-title>
@@ -685,14 +682,10 @@
                   <v-icon left size="13">
                     mdi-image-outline
                   </v-icon>
-
                   Image
                 </v-chip>
 
-                <v-chip
-                  x-small
-                  class="answer-chip"
-                >
+                <v-chip x-small class="answer-chip">
                   Answer: {{ question.correct_answer }}
                 </v-chip>
 
@@ -758,9 +751,11 @@ export default {
       paper: {
         grade_id: null,
         subject_id: null,
+        al_stream: null,
         year: null,
         medium: 'si',
         title: '',
+        paper_number: null,
         total_questions: 40
       },
 
@@ -770,66 +765,88 @@ export default {
       ),
 
       mediums: [
-        {
-          text: 'Sinhala Medium',
-          value: 'si'
-        },
-        {
-          text: 'English Medium',
-          value: 'en'
-        },
-        {
-          text: 'Tamil Medium',
-          value: 'ta'
-        }
+        { text: 'Sinhala Medium', value: 'si' },
+        { text: 'English Medium', value: 'en' },
+        { text: 'Tamil Medium', value: 'ta' }
       ],
 
-      answerOptions: [
-        'A',
-        'B',
-        'C',
-        'D'
+      // A/L stream options — values match backend const AL_STREAMS
+      streamOptions: [
+        { text: 'Biological Science', value: 'bio' },
+        { text: 'Physical Science', value: 'maths' },
+        { text: 'Technology', value: 'technology' },
+        { text: 'Arts', value: 'arts' },
+        { text: 'Commerce', value: 'commerce' }
       ],
+
+      answerOptions: ['A', 'B', 'C', 'D'],
 
       difficultyOptions: [
-        {
-          text: 'Easy',
-          value: 'easy'
-        },
-        {
-          text: 'Medium',
-          value: 'medium'
-        },
-        {
-          text: 'Hard',
-          value: 'hard'
-        }
+        { text: 'Easy', value: 'easy' },
+        { text: 'Medium', value: 'medium' },
+        { text: 'Hard', value: 'hard' }
       ],
 
       questions: [],
 
       currentQuestion: {
         question_text: '',
-
         image_url: null,
-
-        options: {
-          A: '',
-          B: '',
-          C: '',
-          D: ''
-        },
-
+        options: { A: '', B: '', C: '', D: '' },
         correct_answer: '',
-
         difficulty: 'medium',
-
         explanation: ''
       }
     }
   },
 
   computed: {
+    /**
+     * Detect if the selected grade is A/L.
+     */
+    isAlGrade () {
+      if (!this.paper.grade_id) {
+        return false
+      }
+
+      const grade = this.grades.find(
+        g => g.id === this.paper.grade_id
+      )
+
+      return grade && grade.category === 'al'
+    },
+
+    /**
+     * Subject dropdown should only be enabled once
+     * a grade is selected AND (for A/L) a stream is chosen.
+     */
+    canSelectSubject () {
+      if (!this.paper.grade_id) {
+        return false
+      }
+
+      if (this.isAlGrade) {
+        return !!this.paper.al_stream
+      }
+
+      return true
+    },
+
+    /**
+     * Helper hint shown under disabled Subject select.
+     */
+    subjectHint () {
+      if (!this.paper.grade_id) {
+        return 'Select a grade first'
+      }
+
+      if (this.isAlGrade && !this.paper.al_stream) {
+        return 'Select an A/L stream first'
+      }
+
+      return ''
+    },
+
     currentQuestionNumber () {
       return this.questions.length + 1
     },
@@ -845,51 +862,75 @@ export default {
       return Math.min(Math.round(percentage), 100)
     },
 
+    /**
+     * Subjects are filtered by the backend already,
+     * so we just pass them through. This computed is
+     * kept as a central place for any extra filtering.
+     */
     filteredSubjects () {
-      /*
-       * If your subjects API returns grade relationships,
-       * this can later be filtered by grade.
-       *
-       * For now the backend subject list is used directly.
-       */
       return this.subjects
     }
   },
 
   watch: {
+    /**
+     * When grade changes:
+     * - reset subject + stream
+     * - reload subjects filtered by grade
+     */
     'paper.grade_id' (newValue, oldValue) {
-      /*
-       * Prevent the watcher from resetting subject_id
-       * while we are loading an existing past paper.
-       */
-      if (
-        this.editMode &&
-        this.loadingPaper
-      ) {
+      if (this.editMode && this.loadingPaper) {
         return
       }
 
-      if (newValue !== oldValue) {
-        this.paper.subject_id = null
+      if (newValue === oldValue) {
+        return
+      }
+
+      this.paper.subject_id = null
+      this.paper.al_stream = null
+
+      if (newValue) {
+        this.loadSubjects()
+      } else {
+        this.subjects = []
+      }
+    },
+
+    /**
+     * When A/L stream changes:
+     * - reset subject
+     * - reload subjects filtered by grade + stream
+     */
+    'paper.al_stream' (newValue, oldValue) {
+      if (this.editMode && this.loadingPaper) {
+        return
+      }
+
+      if (newValue === oldValue) {
+        return
+      }
+
+      this.paper.subject_id = null
+
+      if (this.paper.grade_id && this.isAlGrade) {
+        this.loadSubjects()
       }
     }
   },
 
   async mounted () {
-    await Promise.all([
-      this.loadGrades(),
-      this.loadSubjects()
-    ])
+    await this.loadGrades()
+
+    // Initial state: no grade selected → no subjects
+    // We don't load subjects until a grade is chosen.
 
     const editId = this.$route.query.edit
 
     if (editId) {
       this.editMode = true
       this.editingPaperId = Number(editId)
-
-      await this.loadPastPaper(
-        this.editingPaperId
-      )
+      await this.loadPastPaper(this.editingPaperId)
     }
   },
 
@@ -901,54 +942,57 @@ export default {
       this.loadingGrades = true
 
       try {
-        const response = await this.$axios.get(
-          '/public/grades'
-        )
-
+        const response = await this.$axios.get('/public/grades')
         const data = response.data
 
         if (data.success) {
           this.grades = data.data || []
         } else {
-          this.showError(
-            data.message || 'Unable to load grades.'
-          )
+          this.showError(data.message || 'Unable to load grades.')
         }
       } catch (error) {
-        this.handleApiError(
-          error,
-          'Unable to load grades.'
-        )
+        this.handleApiError(error, 'Unable to load grades.')
       } finally {
         this.loadingGrades = false
       }
     },
 
     // =====================================================
-    // LOAD SUBJECTS
+    // LOAD SUBJECTS (filtered by grade + stream)
     // =====================================================
     async loadSubjects () {
+      if (!this.paper.grade_id) {
+        this.subjects = []
+        return
+      }
+
       this.loadingSubjects = true
 
       try {
-        const response = await this.$axios.get(
-          '/public/subjects'
-        )
+        const params = {
+          grade_id: this.paper.grade_id
+        }
+
+        // Only send al_stream for A/L grades
+        if (this.isAlGrade && this.paper.al_stream) {
+          params.al_stream = this.paper.al_stream
+        }
+
+        const response = await this.$axios.get('/public/subjects', {
+          params
+        })
 
         const data = response.data
 
         if (data.success) {
           this.subjects = data.data || []
         } else {
-          this.showError(
-            data.message || 'Unable to load subjects.'
-          )
+          this.subjects = []
+          this.showError(data.message || 'Unable to load subjects.')
         }
       } catch (error) {
-        this.handleApiError(
-          error,
-          'Unable to load subjects.'
-        )
+        this.subjects = []
+        this.handleApiError(error, 'Unable to load subjects.')
       } finally {
         this.loadingSubjects = false
       }
@@ -961,97 +1005,53 @@ export default {
       this.loadingPaper = true
 
       try {
-        const response = await this.$axios.get(
-          `/admin/past-papers/${id}`
-        )
-
+        const response = await this.$axios.get(`/admin/past-papers/${id}`)
         const data = response.data
 
         if (!data.success) {
-          throw new Error(
-            data.message ||
-            'Unable to load past paper.'
-          )
+          throw new Error(data.message || 'Unable to load past paper.')
         }
 
         const pastPaper = data.data
 
-        // =========================
-        // PAPER INFORMATION
-        // =========================
+        // Set paper info (grade + stream first, so isAlGrade is correct)
         this.paper = {
           grade_id: pastPaper.grade_id,
           subject_id: pastPaper.subject_id,
+          al_stream: pastPaper.al_stream || null,
           year: pastPaper.year,
           medium: pastPaper.medium,
           title: pastPaper.title,
-          total_questions:
-            pastPaper.total_questions
+          paper_number: pastPaper.paper_number ?? null,
+          total_questions: pastPaper.total_questions
         }
 
-        // =========================
-        // QUESTIONS
-        // =========================
-        this.questions =
-          (pastPaper.questions || []).map(
-            question => ({
-              temp_id:
-                `existing-${question.id}`,
+        // Load the correct subject list BEFORE clearing loadingPaper,
+        // so watchers don't fire during the load.
+        await this.loadSubjects()
 
-              id: question.id,
-
-              question_number:
-                question.question_number,
-
-              question_text:
-                question.question_text,
-
-              image_url:
-                question.image_url || null,
-
-              options: {
-                A: this.getOptionText(
-                  question,
-                  'A'
-                ),
-
-                B: this.getOptionText(
-                  question,
-                  'B'
-                ),
-
-                C: this.getOptionText(
-                  question,
-                  'C'
-                ),
-
-                D: this.getOptionText(
-                  question,
-                  'D'
-                )
-              },
-
-              correct_answer:
-                question.correct_answer,
-
-              difficulty:
-                question.difficulty || 'medium',
-
-              explanation:
-                question.explanation || ''
-            })
-          )
+        // Load questions
+        this.questions = (pastPaper.questions || []).map(question => ({
+          temp_id: `existing-${question.id}`,
+          id: question.id,
+          question_number: question.question_number,
+          question_text: question.question_text,
+          image_url: question.image_url || null,
+          options: {
+            A: this.getOptionText(question, 'A'),
+            B: this.getOptionText(question, 'B'),
+            C: this.getOptionText(question, 'C'),
+            D: this.getOptionText(question, 'D')
+          },
+          correct_answer: question.correct_answer,
+          difficulty: question.difficulty || 'medium',
+          explanation: question.explanation || ''
+        }))
 
         this.clearCurrentQuestion()
       } catch (error) {
-        this.handleApiError(
-          error,
-          'Unable to load past paper.'
-        )
-
-        this.$router.push(
-          '/questions/past-papers'
-        )
+        this.handleApiError(error, 'Unable to load past paper.')
+        this.$router.push('/questions/past-paper-quizes')
       } finally {
         this.loadingPaper = false
       }
@@ -1061,15 +1061,10 @@ export default {
     // GET OPTION TEXT
     // =====================================================
     getOptionText (question, key) {
-      const option =
-        (question.options || []).find(
-          item =>
-            item.option_key === key
-        )
-
-      return option
-        ? option.option_text
-        : ''
+      const option = (question.options || []).find(
+        item => item.option_key === key
+      )
+      return option ? option.option_text : ''
     },
 
     // =====================================================
@@ -1079,7 +1074,6 @@ export default {
       if (this.uploadingImage) {
         return
       }
-
       this.$refs.questionImageInput.click()
     },
 
@@ -1088,46 +1082,23 @@ export default {
     // =====================================================
     async handleImageSelected (event) {
       const files = event.target.files
-
       if (!files || !files.length) {
         return
       }
 
       const file = files[0]
 
-      /*
-       * Client-side validation.
-       */
-      const allowedTypes = [
-        'image/jpeg',
-        'image/png',
-        'image/webp'
-      ]
-
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
       if (!allowedTypes.includes(file.type)) {
-        this.showError(
-          'Please select a JPG, PNG or WEBP image.'
-        )
-
+        this.showError('Please select a JPG, PNG or WEBP image.')
         this.resetImageInput()
-
         return
       }
 
-      /*
-       * 5MB maximum.
-       *
-       * Backend also validates this.
-       */
       const maxSize = 5 * 1024 * 1024
-
       if (file.size > maxSize) {
-        this.showError(
-          'Image size must be 5MB or less.'
-        )
-
+        this.showError('Image size must be 5MB or less.')
         this.resetImageInput()
-
         return
       }
 
@@ -1142,46 +1113,25 @@ export default {
 
       try {
         const formData = new FormData()
-
         formData.append('image', file)
 
         const response = await this.$axios.post(
           '/admin/past-papers/upload-image',
           formData,
-          {
-            headers: {
-              'Content-Type': 'multipart/form-data'
-            }
-          }
+          { headers: { 'Content-Type': 'multipart/form-data' } }
         )
 
         const data = response.data
-
         if (!data.success) {
-          throw new Error(
-            data.message ||
-            'Image upload failed.'
-          )
+          throw new Error(data.message || 'Image upload failed.')
         }
 
-        /*
-         * Store the public Cloudflare R2 URL
-         * inside the current question.
-         */
-        this.currentQuestion.image_url =
-          data.data.image_url
-
-        this.showSuccess(
-          'Question image uploaded successfully.'
-        )
+        this.currentQuestion.image_url = data.data.image_url
+        this.showSuccess('Question image uploaded successfully.')
       } catch (error) {
-        this.handleApiError(
-          error,
-          'Unable to upload question image.'
-        )
+        this.handleApiError(error, 'Unable to upload question image.')
       } finally {
         this.uploadingImage = false
-
         this.resetImageInput()
       }
     },
@@ -1190,15 +1140,7 @@ export default {
     // REMOVE QUESTION IMAGE
     // =====================================================
     removeQuestionImage () {
-      /*
-       * This removes the image from the current question.
-       *
-       * The already-uploaded R2 object is not deleted here.
-       * The current backend does not have an image-delete
-       * endpoint yet.
-       */
       this.currentQuestion.image_url = null
-
       this.resetImageInput()
     },
 
@@ -1206,9 +1148,7 @@ export default {
     // RESET FILE INPUT
     // =====================================================
     resetImageInput () {
-      if (
-        this.$refs.questionImageInput
-      ) {
+      if (this.$refs.questionImageInput) {
         this.$refs.questionImageInput.value = ''
       }
     },
@@ -1218,56 +1158,37 @@ export default {
     // =====================================================
     validatePaper () {
       if (!this.paper.grade_id) {
-        this.showError(
-          'Please select a grade.'
-        )
+        this.showError('Please select a grade.')
+        return false
+      }
 
+      if (this.isAlGrade && !this.paper.al_stream) {
+        this.showError('Please select the A/L stream.')
         return false
       }
 
       if (!this.paper.subject_id) {
-        this.showError(
-          'Please select a subject.'
-        )
-
+        this.showError('Please select a subject.')
         return false
       }
 
       if (!this.paper.year) {
-        this.showError(
-          'Please select the paper year.'
-        )
-
+        this.showError('Please select the paper year.')
         return false
       }
 
       if (!this.paper.medium) {
-        this.showError(
-          'Please select the medium.'
-        )
-
+        this.showError('Please select the medium.')
         return false
       }
 
-      if (
-        !this.paper.title ||
-        !this.paper.title.trim()
-      ) {
-        this.showError(
-          'Please enter the paper name.'
-        )
-
+      if (!this.paper.title || !this.paper.title.trim()) {
+        this.showError('Please enter the paper name.')
         return false
       }
 
-      if (
-        !this.paper.total_questions ||
-        Number(this.paper.total_questions) < 1
-      ) {
-        this.showError(
-          'Please enter the total number of questions.'
-        )
-
+      if (!this.paper.total_questions || Number(this.paper.total_questions) < 1) {
+        this.showError('Please enter the total number of questions.')
         return false
       }
 
@@ -1278,42 +1199,23 @@ export default {
     // VALIDATE QUESTION
     // =====================================================
     validateQuestion () {
-      if (
-        !this.currentQuestion.question_text ||
-        !this.currentQuestion.question_text.trim()
-      ) {
-        this.showError(
-          'Please enter the question.'
-        )
-
+      if (!this.currentQuestion.question_text ||
+          !this.currentQuestion.question_text.trim()) {
+        this.showError('Please enter the question.')
         return false
       }
 
-      const optionKeys = [
-        'A',
-        'B',
-        'C',
-        'D'
-      ]
-
+      const optionKeys = ['A', 'B', 'C', 'D']
       for (const key of optionKeys) {
-        if (
-          !this.currentQuestion.options[key] ||
-          !this.currentQuestion.options[key].trim()
-        ) {
-          this.showError(
-            `Please enter Option ${key}.`
-          )
-
+        if (!this.currentQuestion.options[key] ||
+            !this.currentQuestion.options[key].trim()) {
+          this.showError(`Please enter Option ${key}.`)
           return false
         }
       }
 
       if (!this.currentQuestion.correct_answer) {
-        this.showError(
-          'Please select the correct answer.'
-        )
-
+        this.showError('Please select the correct answer.')
         return false
       }
 
@@ -1325,35 +1227,21 @@ export default {
     // =====================================================
     buildQuestionObject (questionNumber) {
       return {
-        temp_id:
-          Date.now() +
-          Math.random(),
-
+        temp_id: Date.now() + Math.random(),
         question_number: questionNumber,
-
-        question_text:
-          this.currentQuestion.question_text.trim(),
-
-        image_url:
-          this.currentQuestion.image_url || null,
-
+        question_text: this.currentQuestion.question_text.trim(),
+        image_url: this.currentQuestion.image_url || null,
         options: {
           A: this.currentQuestion.options.A.trim(),
           B: this.currentQuestion.options.B.trim(),
           C: this.currentQuestion.options.C.trim(),
           D: this.currentQuestion.options.D.trim()
         },
-
-        correct_answer:
-          this.currentQuestion.correct_answer,
-
-        difficulty:
-          this.currentQuestion.difficulty || 'medium',
-
-        explanation:
-          this.currentQuestion.explanation
-            ? this.currentQuestion.explanation.trim()
-            : null
+        correct_answer: this.currentQuestion.correct_answer,
+        difficulty: this.currentQuestion.difficulty || 'medium',
+        explanation: this.currentQuestion.explanation
+          ? this.currentQuestion.explanation.trim()
+          : null
       }
     },
 
@@ -1361,91 +1249,49 @@ export default {
     // EDIT ENTERED QUESTION
     // =====================================================
     editQuestion (index) {
-      const question =
-        this.questions[index]
+      const question = this.questions[index]
 
       this.currentQuestion = {
-        question_text:
-          question.question_text,
-
-        image_url:
-          question.image_url || null,
-
+        question_text: question.question_text,
+        image_url: question.image_url || null,
         options: {
           A: question.options.A || '',
           B: question.options.B || '',
           C: question.options.C || '',
           D: question.options.D || ''
         },
-
-        correct_answer:
-          question.correct_answer,
-
-        difficulty:
-          question.difficulty || 'medium',
-
-        explanation:
-          question.explanation || ''
+        correct_answer: question.correct_answer,
+        difficulty: question.difficulty || 'medium',
+        explanation: question.explanation || ''
       }
 
       this.questions.splice(index, 1)
+      this.showSuccess('Question loaded for editing.')
 
-      this.showSuccess(
-        'Question loaded for editing.'
-      )
-
-      window.scrollTo({
-        top: 0,
-        behavior: 'smooth'
-      })
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     },
 
     // =====================================================
     // SAVE & ADD NEXT
     // =====================================================
     saveAndNext () {
-      if (!this.validatePaper()) {
-        return
-      }
-
-      if (!this.validateQuestion()) {
-        return
-      }
+      if (!this.validatePaper()) { return }
+      if (!this.validateQuestion()) { return }
 
       if (this.uploadingImage) {
-        this.showError(
-          'Please wait until the image upload finishes.'
-        )
-
+        this.showError('Please wait until the image upload finishes.')
         return
       }
 
-      /*
-       * Prevent entering more questions than
-       * the configured paper total.
-       */
-      if (
-        this.questions.length >=
-        Number(this.paper.total_questions)
-      ) {
-        this.showError(
-          'All questions for this paper have already been entered.'
-        )
-
+      if (this.questions.length >= Number(this.paper.total_questions)) {
+        this.showError('All questions for this paper have already been entered.')
         return
       }
 
-      const question =
-        this.buildQuestionObject(
-          this.questions.length + 1
-        )
-
+      const question = this.buildQuestionObject(this.questions.length + 1)
       this.questions.push(question)
 
-      this.showSuccess(
-        'Question added successfully.'
-      )
-
+      this.showSuccess('Question added successfully.')
       this.clearCurrentQuestion()
     },
 
@@ -1453,22 +1299,13 @@ export default {
     // SAVE & FINISH
     // =====================================================
     async saveAndFinish () {
-      if (!this.validatePaper()) {
-        return
-      }
+      if (!this.validatePaper()) { return }
 
       if (this.uploadingImage) {
-        this.showError(
-          'Please wait until the image upload finishes.'
-        )
-
+        this.showError('Please wait until the image upload finishes.')
         return
       }
 
-      /*
-       * If the current question has data,
-       * save it before submitting.
-       */
       const hasCurrentQuestion =
         this.currentQuestion.question_text.trim() ||
         this.currentQuestion.options.A.trim() ||
@@ -1478,25 +1315,15 @@ export default {
         this.currentQuestion.image_url
 
       if (hasCurrentQuestion) {
-        if (!this.validateQuestion()) {
-          return
-        }
+        if (!this.validateQuestion()) { return }
 
-        const question =
-          this.buildQuestionObject(
-            this.questions.length + 1
-          )
-
+        const question = this.buildQuestionObject(this.questions.length + 1)
         this.questions.push(question)
-
         this.clearCurrentQuestion()
       }
 
       if (this.questions.length === 0) {
-        this.showError(
-          'Please enter at least one question.'
-        )
-
+        this.showError('Please enter at least one question.')
         return
       }
 
@@ -1506,59 +1333,54 @@ export default {
     // =====================================================
     // SUBMIT COMPLETE PAST PAPER
     // =====================================================
+
     async submitPastPaper () {
+      if (this.saving) { return }
+
       this.saving = true
 
       try {
         const payload = {
           grade_id: this.paper.grade_id,
-
           subject_id: this.paper.subject_id,
 
+          al_stream: this.isAlGrade
+            ? this.paper.al_stream
+            : null,
+
           year: Number(this.paper.year),
-
           medium: this.paper.medium,
-
           title: this.paper.title.trim(),
 
-          total_questions:
-            Number(this.paper.total_questions),
+          paper_number: this.paper.paper_number
+            ? Number(this.paper.paper_number)
+            : null,
 
-          questions: this.questions.map(
-            (question, index) => ({
-              question_number: index + 1,
+          total_questions: Number(this.paper.total_questions),
 
-              question_text:
-                question.question_text,
+          questions: this.questions.map((question, index) => ({
+            question_number: index + 1,
+            question_text: question.question_text,
+            image_url: question.image_url || null,
+            correct_answer: question.correct_answer,
+            difficulty: question.difficulty || 'medium',
+            explanation: question.explanation || null,
 
-              image_url:
-                question.image_url || null,
-
-              correct_answer:
-                question.correct_answer,
-
-              difficulty:
-                question.difficulty || 'medium',
-
-              explanation:
-                question.explanation || null,
-
-              options: {
-                A: question.options.A,
-                B: question.options.B,
-                C: question.options.C,
-                D: question.options.D
-              }
-            })
-          )
+            options: {
+              A: question.options.A,
+              B: question.options.B,
+              C: question.options.C,
+              D: question.options.D
+            }
+          }))
         }
 
         let response
 
         if (this.editMode) {
           response = await this.$axios.put(
-            `/admin/past-papers/${this.editingPaperId}`,
-            payload
+        `/admin/past-papers/${this.editingPaperId}`,
+        payload
           )
         } else {
           response = await this.$axios.post(
@@ -1570,10 +1392,7 @@ export default {
         const data = response.data
 
         if (!data.success) {
-          throw new Error(
-            data.message ||
-            'Unable to save past paper.'
-          )
+          throw new Error(data.message || 'Unable to save past paper.')
         }
 
         this.showSuccess(
@@ -1582,19 +1401,12 @@ export default {
             : 'Past paper saved successfully.'
         )
 
-        /*
-         * Navigate after successful API response.
-         */
+        // Navigate to the actual View Past Papers page
         setTimeout(() => {
-          this.$router.push(
-            '/questions/past-papers'
-          )
+          this.$router.push('/questions/past-paper-quizes')
         }, 700)
       } catch (error) {
-        this.handleApiError(
-          error,
-          'Unable to save past paper.'
-        )
+        this.handleApiError(error, 'Unable to save past paper.')
       } finally {
         this.saving = false
       }
@@ -1606,23 +1418,12 @@ export default {
     clearCurrentQuestion () {
       this.currentQuestion = {
         question_text: '',
-
         image_url: null,
-
-        options: {
-          A: '',
-          B: '',
-          C: '',
-          D: ''
-        },
-
+        options: { A: '', B: '', C: '', D: '' },
         correct_answer: '',
-
         difficulty: 'medium',
-
         explanation: ''
       }
-
       this.resetImageInput()
     },
 
@@ -1632,19 +1433,11 @@ export default {
     removeQuestion (index) {
       this.questions.splice(index, 1)
 
-      /*
-       * Re-number questions after deletion.
-       */
-      this.questions.forEach(
-        (question, questionIndex) => {
-          question.question_number =
-            questionIndex + 1
-        }
-      )
+      this.questions.forEach((question, questionIndex) => {
+        question.question_number = questionIndex + 1
+      })
 
-      this.showSuccess(
-        'Question removed.'
-      )
+      this.showSuccess('Question removed.')
     },
 
     // =====================================================
@@ -1652,17 +1445,10 @@ export default {
     // =====================================================
     getDifficultyClass (difficulty) {
       switch (difficulty) {
-        case 'easy':
-          return 'chip-green'
-
-        case 'medium':
-          return 'chip-amber'
-
-        case 'hard':
-          return 'chip-red'
-
-        default:
-          return 'chip-neutral'
+        case 'easy': return 'chip-green'
+        case 'medium': return 'chip-amber'
+        case 'hard': return 'chip-red'
+        default: return 'chip-neutral'
       }
     },
 
@@ -1670,55 +1456,26 @@ export default {
     // API ERROR HANDLER
     // =====================================================
     handleApiError (error, fallbackMessage) {
-      console.error(
-        'Past Paper API Error:',
-        error
-      )
+      console.error('Past Paper API Error:', error)
 
-      if (
-        error.response &&
-        error.response.data
-      ) {
-        const responseData =
-          error.response.data
+      if (error.response && error.response.data) {
+        const responseData = error.response.data
 
-        /*
-         * Laravel validation errors.
-         */
-        if (
-          responseData.errors
-        ) {
-          const firstError =
-            Object.values(
-              responseData.errors
-            )[0]
-
-          if (
-            Array.isArray(firstError) &&
-            firstError.length
-          ) {
-            this.showError(
-              firstError[0]
-            )
-
+        if (responseData.errors) {
+          const firstError = Object.values(responseData.errors)[0]
+          if (Array.isArray(firstError) && firstError.length) {
+            this.showError(firstError[0])
             return
           }
         }
 
-        if (
-          responseData.message
-        ) {
-          this.showError(
-            responseData.message
-          )
-
+        if (responseData.message) {
+          this.showError(responseData.message)
           return
         }
       }
 
-      this.showError(
-        fallbackMessage
-      )
+      this.showError(fallbackMessage)
     },
 
     // =====================================================
