@@ -44,16 +44,23 @@
           </v-chip>
         </template>
 
+        <!-- Grades column: gracefully handle government subjects (no grades) -->
         <template #item.grades="{ item }">
           <div class="py-2">
-            <v-chip
-              v-for="grade in item.grades || []"
-              :key="grade.id"
-              x-small
-              class="mr-1 mb-1"
-            >
-              {{ grade.name }}
-            </v-chip>
+            <template v-if="item.grades && item.grades.length">
+              <v-chip
+                v-for="grade in item.grades"
+                :key="grade.id"
+                x-small
+                class="mr-1 mb-1"
+              >
+                {{ grade.name }}
+              </v-chip>
+            </template>
+
+            <span v-else class="grey--text">
+              No grades
+            </span>
           </div>
         </template>
 
@@ -152,8 +159,9 @@
               @change="onCategoryChange"
             />
 
-            <!-- Multiple Grade Selection -->
+            <!-- Multiple Grade Selection (hidden for Government) -->
             <v-select
+              v-if="form.grade_category !== 'gov'"
               ref="gradeSelect"
               v-model="form.grade_ids"
               :items="filteredGrades"
@@ -201,7 +209,7 @@
               </template>
             </v-select>
 
-            <!-- Multiple A/L Stream Selection -->
+            <!-- Multiple A/L Stream Selection (A/L only) -->
             <v-select
               v-if="form.grade_category === 'al'"
               ref="streamSelect"
@@ -252,6 +260,17 @@
                 </div>
               </template>
             </v-select>
+
+            <!-- Government info banner -->
+            <v-alert
+              v-if="form.grade_category === 'gov'"
+              dense
+              text
+              type="info"
+              class="gov-info mb-4"
+            >
+              Government exam subjects are not tied to any grade or A/L stream.
+            </v-alert>
 
             <!-- Color -->
             <v-text-field
@@ -419,7 +438,6 @@ export default {
   methods: {
     /**
      * Safe notification helper.
-     * Uses $toast if available, otherwise falls back to console.
      */
     notify (type, message) {
       try {
@@ -517,11 +535,6 @@ export default {
       }
     },
 
-    /**
-     * Close the grades dropdown menu.
-     * Vuetify multiple v-select stays open after each pick,
-     * so we programmatically blur it.
-     */
     closeGradeMenu () {
       this.$nextTick(() => {
         const el = this.$refs.gradeSelect
@@ -533,7 +546,6 @@ export default {
           el.blur()
         }
 
-        // Fallback: force-close via Escape key on the inner input
         const input = el.$el && el.$el.querySelector('input')
         if (input) {
           input.dispatchEvent(
@@ -549,11 +561,6 @@ export default {
       })
     },
 
-    /**
-     * Close the A/L streams dropdown menu.
-     * Same behaviour as closeGradeMenu() — used by the Done button
-     * inside the streams dropdown.
-     */
     closeStreamMenu () {
       this.$nextTick(() => {
         const el = this.$refs.streamSelect
@@ -589,10 +596,17 @@ export default {
     },
 
     /**
-     * Only clear grade selection if the currently selected grades
-     * do not belong to the newly selected category.
+     * Category change handler.
+     * Government subjects do not need grades or A/L streams.
      */
     onCategoryChange () {
+      // Government subjects do not need grades or A/L streams.
+      if (this.form.grade_category === 'gov') {
+        this.form.grade_ids = []
+        this.form.al_streams = []
+        return
+      }
+
       const allowedIds = this.grades
         .filter(
           g =>
@@ -608,6 +622,7 @@ export default {
         this.form.grade_ids = []
       }
 
+      // Clear A/L streams when switching to another category.
       if (this.form.grade_category !== 'al') {
         this.form.al_streams = []
       }
@@ -648,8 +663,6 @@ export default {
           ? subject.grade_ids
           : (subject.grades || []).map(g => g.id)
 
-      // Get streams from the subject response.
-      // Fallback to grade-level streams if needed.
       let streams = Array.isArray(subject.al_streams)
         ? subject.al_streams
         : []
@@ -669,13 +682,16 @@ export default {
         streams = [subject.al_stream]
       }
 
+      const category =
+        subject.grade_category || this.guessCategory(subject.grades)
+
       this.form = {
         id: subject.id,
         name: subject.name || '',
-        grade_category:
-          subject.grade_category || this.guessCategory(subject.grades),
-        grade_ids: gradeIds,
-        al_streams: streams,
+        grade_category: category,
+        // Government subjects never carry grades or streams.
+        grade_ids: category === 'gov' ? [] : gradeIds,
+        al_streams: category === 'gov' ? [] : streams,
         color: subject.color || '#3B82F6',
         description: subject.description || '',
         icon: null
@@ -695,21 +711,25 @@ export default {
         return
       }
 
+      const category = this.form.grade_category
+
+      // Validate grades only for non-government subjects.
       if (
-        this.form.grade_category === 'al' &&
+        category !== 'gov' &&
+        (!Array.isArray(this.form.grade_ids) ||
+          this.form.grade_ids.length === 0)
+      ) {
+        this.notify('error', 'Please select at least one grade')
+        return
+      }
+
+      // Validate A/L streams.
+      if (
+        category === 'al' &&
         (!Array.isArray(this.form.al_streams) ||
           this.form.al_streams.length === 0)
       ) {
         this.notify('error', 'Please select at least one A/L stream')
-        return
-      }
-
-      // Guard: grade_ids must be present
-      if (
-        !Array.isArray(this.form.grade_ids) ||
-        this.form.grade_ids.length === 0
-      ) {
-        this.notify('error', 'Please select at least one grade')
         return
       }
 
@@ -719,23 +739,25 @@ export default {
         const formData = new FormData()
 
         formData.append('name', this.form.name)
-        formData.append('grade_category', this.form.grade_category)
+        formData.append('grade_category', category)
         formData.append('color', this.form.color || '#3B82F6')
         formData.append('description', this.form.description || '')
 
-        // Multiple grade IDs
-        this.form.grade_ids.forEach((id) => {
-          formData.append('grade_ids[]', id)
-        })
+        // Only send grade IDs for non-government subjects.
+        if (category !== 'gov') {
+          this.form.grade_ids.forEach((id) => {
+            formData.append('grade_ids[]', id)
+          })
+        }
 
-        // Multiple A/L streams — only send for A/L category
-        if (this.form.grade_category === 'al') {
+        // Only send A/L streams for A/L subjects.
+        if (category === 'al') {
           this.form.al_streams.forEach((stream) => {
             formData.append('al_streams[]', stream)
           })
         }
 
-        // Subject icon
+        // Subject icon.
         if (this.form.icon instanceof File) {
           formData.append('icon', this.form.icon)
         }
@@ -766,40 +788,32 @@ export default {
               : 'Subject created successfully')
         )
 
-        // Close dialog and reset form BEFORE reloading so the
-        // UI feels instant and Vue flushes the render queue.
         this.dialog = false
         this.resetForm()
 
-        // Wait for Vue to flush the dialog-close render
         await this.$nextTick()
-
-        // Reload table data from the server (picks up the new/edited row)
         await this.loadSubjects()
 
-        // Defensive: force table reactivity with a new array reference.
-        // This guarantees the v-data-table re-renders even if the
-        // server returned an identical array reference on the client.
         this.subjects = [...this.subjects]
       } catch (error) {
-        // Log the full error so you can inspect it in DevTools
         console.error('Failed to save subject:', {
           status: error.response && error.response.status,
           data: error.response && error.response.data,
           message: error.message
         })
 
-        // Extract the most useful error message, including validation
-        // field errors (422 responses).
         let message = 'Failed to save subject'
 
         const data = error.response && error.response.data
+
         if (data) {
           if (data.message) {
             message = data.message
           }
+
           if (data.errors && typeof data.errors === 'object') {
             const firstField = Object.keys(data.errors)[0]
+
             if (
               firstField &&
               Array.isArray(data.errors[firstField]) &&
@@ -914,6 +928,18 @@ export default {
 }
 .dark-field ::v-deep .v-icon {
   color: #64748B !important;
+}
+
+/* Government info banner */
+.gov-info ::v-deep .v-alert__content {
+  color: #A5B4FC !important;
+  font-size: 13px;
+}
+::v-deep .v-alert.gov-info {
+  background: rgba(99, 102, 241, 0.12) !important;
+  border: 1px solid rgba(99, 102, 241, 0.28);
+  border-radius: 10px;
+  color: #A5B4FC !important;
 }
 
 /* Ensure the grades dropdown menu (rendered in body) is readable */
