@@ -131,6 +131,11 @@ export default {
               title: 'Past Paper Entry',
               to: '/questions/past-paper',
               icon: 'mdi-file-document-edit-outline'
+            },
+            {
+              title: 'Manual quiz Entry',
+              to: '/questions/quiz-entry',
+              icon: 'mdi-file-document-edit-outline'
             }
           ]
         },

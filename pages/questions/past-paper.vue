@@ -849,6 +849,24 @@ export default {
       return !!(grade && grade.category === 'al')
     },
 
+    isGovGrade () {
+      if (!this.paper.grade_id) {
+        return false
+      }
+
+      const grade = this.grades.find(
+        g => Number(g.id) === Number(this.paper.grade_id)
+      )
+
+      return !!(
+        grade &&
+        (
+          grade.slug === 'gov' ||
+          String(grade.category).toLowerCase() === 'government exam'
+        )
+      )
+    },
+
     // Enable subject selection after grade and stream selection.
     canSelectSubject () {
       if (!this.paper.grade_id) {
@@ -869,6 +887,10 @@ export default {
 
       if (this.isAlGrade && !this.paper.al_stream) {
         return 'Select an A/L stream first'
+      }
+
+      if (this.isGovGrade) {
+        return 'Select a government examination subject'
       }
 
       return ''
@@ -972,6 +994,7 @@ export default {
     // =====================================================
     // LOAD SUBJECTS
     // =====================================================
+
     async loadSubjects () {
       if (!this.paper.grade_id) {
         this.subjects = []
@@ -981,17 +1004,36 @@ export default {
       this.loadingSubjects = true
 
       try {
-        const params = {
-          grade_id: this.paper.grade_id
-        }
+        let response
 
-        if (this.isAlGrade && this.paper.al_stream) {
-          params.al_stream = this.paper.al_stream
-        }
+        // ==========================================
+        // GOV SUBJECTS
+        // GOV subjects are not linked through
+        // grade_subjects pivot table.
+        // ==========================================
+        if (this.isGovGrade) {
+          response = await this.$axios.get('/public/subjects', {
+            params: {
+              grade_category: 'gov'
+            }
+          })
+        } else {
+          // ==========================================
+          // NORMAL GRADES
+          // Scholarship / O/L / A/L
+          // ==========================================
+          const params = {
+            grade_id: this.paper.grade_id
+          }
 
-        const response = await this.$axios.get('/public/subjects', {
-          params
-        })
+          if (this.isAlGrade && this.paper.al_stream) {
+            params.al_stream = this.paper.al_stream
+          }
+
+          response = await this.$axios.get('/public/subjects', {
+            params
+          })
+        }
 
         const data = response.data
 

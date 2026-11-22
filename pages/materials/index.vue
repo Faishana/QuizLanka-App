@@ -213,7 +213,10 @@
             :items="subjects"
             item-text="name"
             item-value="id"
-            label="Subject"
+            label="Select Subject"
+            :loading="subjectsLoading"
+            :disabled="!editForm.grade_id || subjectsLoading"
+            no-data-text="No subjects available for this grade"
             outlined
             class="dark-field"
           />
@@ -301,7 +304,10 @@
             :items="subjects"
             item-text="name"
             item-value="id"
-            label="Subject"
+            label="Select Subject"
+            :loading="subjectsLoading"
+            :disabled="!uploadForm.grade_id || subjectsLoading"
+            no-data-text="No subjects available for this grade"
             outlined
             required
             class="dark-field"
@@ -420,15 +426,48 @@ export default {
     }
   },
 
-  mounted () {
-    this.loadMaterials()
-    this.loadGrades()
-    this.loadSubjects()
+  watch: {
+    // Upload dialog — grade change resets subject and reloads list.
+    'uploadForm.grade_id' (newValue, oldValue) {
+      if (newValue === oldValue) {
+        return
+      }
 
-    // Auto-refresh every 5 seconds only if there are pending materials
+      this.uploadForm.subject_id = null
+      this.subjects = []
+
+      if (newValue) {
+        this.loadSubjects(newValue)
+      }
+    },
+
+    // Edit dialog — grade change resets subject and reloads list.
+    // When editing we set grade_id deliberately via editMaterial(),
+    // so this only triggers once for the user action, not on open.
+    'editForm.grade_id' (newValue, oldValue) {
+      if (newValue === oldValue) {
+        return
+      }
+
+      this.editForm.subject_id = null
+      this.subjects = []
+
+      if (newValue) {
+        this.loadSubjects(newValue)
+      }
+    }
+  },
+
+  async mounted () {
+    this.loadMaterials()
+    await this.loadGrades()
+
+    // Auto-refresh every 5 seconds only if there are pending materials.
     this.interval = setInterval(() => {
       const hasPending = this.materials.some(
-        m => m.processing_status === 'pending' || m.processing_status === 'processing'
+        m =>
+          m.processing_status === 'pending' ||
+          m.processing_status === 'processing'
       )
 
       if (hasPending) {
@@ -448,8 +487,6 @@ export default {
       try {
         this.loading = true
 
-        // $axios already attaches the auth token via the app's request
-        // interceptor, so no need to read localStorage/set headers here.
         const response = await this.$axios.get('/admin/materials')
 
         this.materials = response.data.data || []
@@ -470,14 +507,63 @@ export default {
       }
     },
 
-    async loadSubjects () {
+    // Loads subjects for a given grade only. GOV grades use the
+    // `grade_category=gov` filter instead of the grade relationship.
+    async loadSubjects (gradeId) {
+      if (!gradeId) {
+        this.subjects = []
+        return
+      }
+
       try {
         this.subjectsLoading = true
-        const response = await this.$axios.get('/admin/subjects')
-        this.subjects = response.data.data || response.data
+
+        const selectedGrade = this.grades.find(
+          grade => Number(grade.id) === Number(gradeId)
+        )
+
+        if (!selectedGrade) {
+          this.subjects = []
+          return
+        }
+
+        let response
+
+        const category = String(
+          selectedGrade.category || ''
+        ).toLowerCase()
+
+        const slug = String(selectedGrade.slug || '').toLowerCase()
+
+        if (slug === 'gov' || category === 'government exam' || category === 'gov') {
+          response = await this.$axios.get('/public/subjects', {
+            params: { grade_category: 'gov' }
+          })
+        } else {
+          response = await this.$axios.get('/public/subjects', {
+            params: { grade_id: gradeId }
+          })
+        }
+
+        const data = response.data
+
+        if (data && data.success) {
+          this.subjects = data.data || []
+        } else {
+          this.subjects = []
+          this.$toast?.error(
+            (data && data.message) || 'Unable to load subjects.'
+          ) || alert((data && data.message) || 'Unable to load subjects.')
+        }
       } catch (error) {
-        console.error('Failed to load subjects', error)
-        this.$toast?.error('Failed to load subjects') || alert('Failed to load subjects')
+        console.error('Failed to load subjects:', error)
+
+        this.subjects = []
+
+        const message =
+          error.response?.data?.message || 'Failed to load subjects'
+
+        this.$toast?.error(message) || alert(message)
       } finally {
         this.subjectsLoading = false
       }
@@ -508,6 +594,8 @@ export default {
     },
 
     openUploadDialog () {
+      this.subjects = []
+
       this.uploadForm = {
         title: '',
         grade_id: null,
@@ -516,11 +604,14 @@ export default {
         material_type: 'lesson',
         file: null
       }
+
       this.uploadDialog = true
     },
 
     closeUploadDialog () {
       this.uploadDialog = false
+      this.subjects = []
+
       this.uploadForm = {
         title: '',
         grade_id: null,
@@ -531,16 +622,45 @@ export default {
       }
     },
 
-    editMaterial (material) {
+    // Opens the edit dialog and restores the saved subject id after
+    // subjects for the material's grade are loaded.
+    async editMaterial (material) {
+      this.subjects = []
+
       this.editForm = {
         id: material.id,
         title: material.title,
-        grade_id: material.grade_id,
-        subject_id: material.subject_id,
+        grade_id: null,
+        subject_id: null,
         medium: material.medium
       }
 
       this.editDialog = true
+
+      // Ensure watcher does not fire from the null reset above.
+      await this.$nextTick()
+
+      // Setting grade_id triggers the watcher which loads subjects.
+      this.editForm.grade_id = material.grade_id
+
+      // Wait until loadSubjects finishes before restoring subject_id.
+      await this.waitForSubjects()
+
+      this.editForm.subject_id = material.subject_id
+    },
+
+    // Small helper so editMaterial() can wait for the watcher's
+    // loadSubjects() call to complete without a duplicate request.
+    async waitForSubjects () {
+      const maxWait = 5000
+      const step = 50
+      let waited = 0
+
+      while (this.subjectsLoading && waited < maxWait) {
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise(resolve => setTimeout(resolve, step))
+        waited += step
+      }
     },
 
     async updateMaterial () {

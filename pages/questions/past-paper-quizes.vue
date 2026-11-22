@@ -46,23 +46,15 @@
          SUMMARY CARDS
     ====================================================== -->
     <v-row class="summary-row">
-      <v-col
-        cols="12"
-        sm="6"
-        md="3"
-      >
+      <v-col cols="12" sm="6" md="3">
         <div class="summary-card">
           <div class="summary-icon cyan">
-            <v-icon>
-              mdi-file-document-multiple-outline
-            </v-icon>
+            <v-icon>mdi-file-document-multiple-outline</v-icon>
           </div>
-
           <div>
             <div class="summary-label">
               Total Papers
             </div>
-
             <div class="summary-value">
               {{ totalPapers }}
             </div>
@@ -70,23 +62,15 @@
         </div>
       </v-col>
 
-      <v-col
-        cols="12"
-        sm="6"
-        md="3"
-      >
+      <v-col cols="12" sm="6" md="3">
         <div class="summary-card">
           <div class="summary-icon purple">
-            <v-icon>
-              mdi-help-circle-outline
-            </v-icon>
+            <v-icon>mdi-help-circle-outline</v-icon>
           </div>
-
           <div>
             <div class="summary-label">
               Total Questions
             </div>
-
             <div class="summary-value">
               {{ totalQuestions }}
             </div>
@@ -94,23 +78,15 @@
         </div>
       </v-col>
 
-      <v-col
-        cols="12"
-        sm="6"
-        md="3"
-      >
+      <v-col cols="12" sm="6" md="3">
         <div class="summary-card">
           <div class="summary-icon green">
-            <v-icon>
-              mdi-image-multiple-outline
-            </v-icon>
+            <v-icon>mdi-image-multiple-outline</v-icon>
           </div>
-
           <div>
             <div class="summary-label">
               Papers Loaded
             </div>
-
             <div class="summary-value">
               {{ pastPapers.length }}
             </div>
@@ -118,23 +94,15 @@
         </div>
       </v-col>
 
-      <v-col
-        cols="12"
-        sm="6"
-        md="3"
-      >
+      <v-col cols="12" sm="6" md="3">
         <div class="summary-card">
           <div class="summary-icon amber">
-            <v-icon>
-              mdi-calendar-range
-            </v-icon>
+            <v-icon>mdi-calendar-range</v-icon>
           </div>
-
           <div>
             <div class="summary-label">
               Latest Year
             </div>
-
             <div class="summary-value">
               {{ latestYear || '-' }}
             </div>
@@ -146,17 +114,13 @@
     <!-- =====================================================
          FILTER CARD
     ====================================================== -->
-    <v-card
-      flat
-      class="panel-card filter-card"
-    >
+    <v-card flat class="panel-card filter-card">
       <v-card-text>
         <div class="filter-header">
           <div>
             <div class="filter-title">
               Filter Past Papers
             </div>
-
             <div class="filter-subtitle">
               Find papers by grade, subject, year or medium.
             </div>
@@ -173,12 +137,7 @@
         </div>
 
         <v-row class="mt-3">
-          <!-- Grade -->
-          <v-col
-            cols="12"
-            sm="6"
-            md="3"
-          >
+          <v-col cols="12" sm="6" md="3">
             <v-select
               v-model="filters.grade_id"
               :items="grades"
@@ -190,16 +149,11 @@
               clearable
               hide-details
               class="dark-field"
-              @change="loadPastPapers"
+              @change="onFilterChange"
             />
           </v-col>
 
-          <!-- Subject -->
-          <v-col
-            cols="12"
-            sm="6"
-            md="3"
-          >
+          <v-col cols="12" sm="6" md="3">
             <v-select
               v-model="filters.subject_id"
               :items="subjects"
@@ -211,16 +165,11 @@
               clearable
               hide-details
               class="dark-field"
-              @change="loadPastPapers"
+              @change="onFilterChange"
             />
           </v-col>
 
-          <!-- Year -->
-          <v-col
-            cols="12"
-            sm="6"
-            md="2"
-          >
+          <v-col cols="12" sm="6" md="2">
             <v-select
               v-model="filters.year"
               :items="years"
@@ -230,16 +179,11 @@
               clearable
               hide-details
               class="dark-field"
-              @change="loadPastPapers"
+              @change="onFilterChange"
             />
           </v-col>
 
-          <!-- Medium -->
-          <v-col
-            cols="12"
-            sm="6"
-            md="2"
-          >
+          <v-col cols="12" sm="6" md="2">
             <v-select
               v-model="filters.medium"
               :items="mediums"
@@ -251,16 +195,11 @@
               clearable
               hide-details
               class="dark-field"
-              @change="loadPastPapers"
+              @change="onFilterChange"
             />
           </v-col>
 
-          <!-- Refresh -->
-          <v-col
-            cols="12"
-            md="2"
-            class="d-flex align-center justify-end"
-          >
+          <v-col cols="12" md="2" class="d-flex align-center justify-end">
             <v-btn
               outlined
               class="refresh-btn"
@@ -280,11 +219,7 @@
     <!-- =====================================================
          LOADING
     ====================================================== -->
-    <v-card
-      v-if="loading"
-      flat
-      class="panel-card loading-card"
-    >
+    <v-card v-if="loading" flat class="panel-card loading-card">
       <v-card-text>
         <v-progress-circular
           indeterminate
@@ -333,203 +268,140 @@
           <v-icon left size="18">
             mdi-plus
           </v-icon>
-
           Add Past Paper
         </v-btn>
       </v-card-text>
     </v-card>
 
     <!-- =====================================================
-         PAST PAPER LIST
+         PAST PAPER LIST VIEW
     ====================================================== -->
-    <div
-      v-else
-      class="papers-grid"
-    >
+    <v-card v-else flat class="panel-card list-card">
+      <!-- Column headers -->
+      <div class="list-head">
+        <div>Year</div>
+        <div>Paper</div>
+        <div class="col-grade">
+          Grade
+        </div>
+        <div class="col-subject">
+          Subject
+        </div>
+        <div class="col-medium">
+          Medium
+        </div>
+        <div class="col-questions">
+          Questions
+        </div>
+        <div class="col-actions">
+          Actions
+        </div>
+      </div>
+
+      <!-- Rows -->
       <div
         v-for="paper in pastPapers"
         :key="paper.id"
-        class="paper-card"
+        class="list-row"
+        tabindex="0"
+        role="button"
+        @click="viewPaper(paper)"
+        @keyup.enter="viewPaper(paper)"
       >
-        <!-- Card Top -->
-        <div class="paper-card-top">
-          <div class="paper-year">
-            {{ paper.year }}
+        <div>
+          <span class="paper-year">{{ paper.year }}</span>
+        </div>
+
+        <div class="col-title">
+          <div class="paper-title">
+            {{ paper.title }}
           </div>
 
-          <v-menu
-            offset-y
-            left
-          >
-            <template #activator="{ on, attrs }">
+          <!-- Shown only on small screens, where the columns are hidden -->
+          <div class="row-meta">
+            {{ paper.grade ? paper.grade.name : '-' }}
+            · {{ paper.subject ? paper.subject.name : '-' }}
+            · {{ getMediumName(paper.medium) }}
+            · {{ paper.total_questions || 0 }} questions
+          </div>
+        </div>
+
+        <div class="col-grade">
+          <v-chip x-small class="chip-cyan">
+            {{ paper.grade ? paper.grade.name : '-' }}
+          </v-chip>
+        </div>
+
+        <div class="col-subject">
+          <v-chip x-small class="chip-violet">
+            {{ paper.subject ? paper.subject.name : '-' }}
+          </v-chip>
+        </div>
+
+        <div class="col-medium">
+          <v-chip x-small class="chip-green">
+            {{ getMediumName(paper.medium) }}
+          </v-chip>
+        </div>
+
+        <div class="col-questions question-stat">
+          {{ paper.total_questions || 0 }}
+        </div>
+
+        <div class="col-actions row-actions">
+          <v-tooltip bottom>
+            <template #activator="{ on }">
               <v-btn
                 icon
                 small
-                class="menu-btn"
-                v-bind="attrs"
+                class="act-view"
                 v-on="on"
+                @click.stop="viewPaper(paper)"
               >
-                <v-icon size="20">
-                  mdi-dots-vertical
+                <v-icon size="19">
+                  mdi-eye-outline
                 </v-icon>
               </v-btn>
             </template>
-
-            <v-list
-              dense
-              dark
-              class="action-menu"
-            >
-              <v-list-item
-                @click="viewPaper(paper)"
-              >
-                <v-list-item-icon>
-                  <v-icon color="#22D3EE">
-                    mdi-eye-outline
-                  </v-icon>
-                </v-list-item-icon>
-
-                <v-list-item-title>
-                  View
-                </v-list-item-title>
-              </v-list-item>
-
-              <v-list-item
-                @click="editPaper(paper)"
-              >
-                <v-list-item-icon>
-                  <v-icon color="#A78BFA">
-                    mdi-pencil-outline
-                  </v-icon>
-                </v-list-item-icon>
-
-                <v-list-item-title>
-                  Edit
-                </v-list-item-title>
-              </v-list-item>
-
-              <v-list-item
-                @click="confirmDelete(paper)"
-              >
-                <v-list-item-icon>
-                  <v-icon color="#F87171">
-                    mdi-delete-outline
-                  </v-icon>
-                </v-list-item-icon>
-
-                <v-list-item-title>
-                  Delete
-                </v-list-item-title>
-              </v-list-item>
-            </v-list>
-          </v-menu>
-        </div>
-
-        <!-- Paper Title -->
-        <div class="paper-title">
-          {{ paper.title }}
-        </div>
-
-        <!-- Grade / Subject -->
-        <div class="paper-meta-row">
-          <span class="meta-item">
-            <v-icon
-              left
-              size="15"
-            >
-              mdi-school-outline
-            </v-icon>
-
-            {{
-              paper.grade
-                ? paper.grade.name
-                : '-'
-            }}
-          </span>
-
-          <span class="meta-item">
-            <v-icon
-              left
-              size="15"
-            >
-              mdi-book-open-page-variant-outline
-            </v-icon>
-
-            {{
-              paper.subject
-                ? paper.subject.name
-                : '-'
-            }}
-          </span>
-        </div>
-
-        <!-- Divider -->
-        <div class="paper-divider" />
-
-        <!-- Bottom Stats -->
-        <div class="paper-stats">
-          <div class="stat">
-            <div class="stat-label">
-              Medium
-            </div>
-
-            <div class="stat-value">
-              {{ getMediumName(paper.medium) }}
-            </div>
-          </div>
-
-          <div class="stat">
-            <div class="stat-label">
-              Questions
-            </div>
-
-            <div class="stat-value question-stat">
-              {{ paper.total_questions || 0 }}
-            </div>
-          </div>
-        </div>
-
-        <!-- Actions -->
-        <div class="paper-actions">
-          <v-btn
-            text
-            small
-            class="view-btn"
-            @click="viewPaper(paper)"
-          >
-            <v-icon left size="17">
-              mdi-eye-outline
-            </v-icon>
-
             View
-          </v-btn>
+          </v-tooltip>
 
-          <v-btn
-            text
-            small
-            class="edit-btn"
-            @click="editPaper(paper)"
-          >
-            <v-icon left size="17">
-              mdi-pencil-outline
-            </v-icon>
-
+          <v-tooltip bottom>
+            <template #activator="{ on }">
+              <v-btn
+                icon
+                small
+                class="act-edit"
+                v-on="on"
+                @click.stop="editPaper(paper)"
+              >
+                <v-icon size="19">
+                  mdi-pencil-outline
+                </v-icon>
+              </v-btn>
+            </template>
             Edit
-          </v-btn>
+          </v-tooltip>
 
-          <v-btn
-            icon
-            small
-            class="delete-btn"
-            @click="confirmDelete(paper)"
-          >
-            <v-icon size="18">
-              mdi-delete-outline
-            </v-icon>
-          </v-btn>
+          <v-tooltip bottom>
+            <template #activator="{ on }">
+              <v-btn
+                icon
+                small
+                class="act-delete"
+                v-on="on"
+                @click.stop="confirmDelete(paper)"
+              >
+                <v-icon size="19">
+                  mdi-delete-outline
+                </v-icon>
+              </v-btn>
+            </template>
+            Delete
+          </v-tooltip>
         </div>
       </div>
-    </div>
+    </v-card>
 
     <!-- =====================================================
          PAGINATION
@@ -557,12 +429,8 @@
       scrollable
     >
       <v-card class="dialog-card">
-        <!-- Dialog Header -->
         <v-card-title class="dialog-header">
-          <div
-            v-if="selectedPaper"
-            class="dialog-header-content"
-          >
+          <div v-if="selectedPaper" class="dialog-header-content">
             <div class="dialog-eyebrow">
               PAST PAPER QUIZ
             </div>
@@ -572,15 +440,9 @@
             </div>
 
             <div class="dialog-meta">
-              {{
-                selectedPaper.grade
-                  ? selectedPaper.grade.name
-                  : ''
-              }}
+              {{ selectedPaper.grade ? selectedPaper.grade.name : '' }}
 
-              <span
-                v-if="selectedPaper.subject"
-              >
+              <span v-if="selectedPaper.subject">
                 · {{ selectedPaper.subject.name }}
               </span>
 
@@ -601,27 +463,20 @@
             class="close-dialog-btn"
             @click="viewDialog = false"
           >
-            <v-icon>
-              mdi-close
-            </v-icon>
+            <v-icon>mdi-close</v-icon>
           </v-btn>
         </v-card-title>
 
         <v-divider class="dialog-divider" />
 
-        <!-- Dialog Body -->
         <v-card-text class="dialog-body">
           <!-- Loading -->
-          <div
-            v-if="loadingView"
-            class="dialog-loading"
-          >
+          <div v-if="loadingView" class="dialog-loading">
             <v-progress-circular
               indeterminate
               color="#22D3EE"
               size="38"
             />
-
             <div>
               Loading questions...
             </div>
@@ -640,7 +495,6 @@
               :key="question.id"
               class="quiz-question"
             >
-              <!-- Question Header -->
               <div class="question-header">
                 <div class="question-number">
                   {{ question.question_number }}
@@ -654,26 +508,17 @@
 
                 <v-chip
                   x-small
-                  :class="
-                    getDifficultyClass(
-                      question.difficulty
-                    )
-                  "
+                  :class="getDifficultyClass(question.difficulty)"
                 >
                   {{ question.difficulty }}
                 </v-chip>
               </div>
 
-              <!-- Question Text -->
               <div class="question-text">
                 {{ question.question_text }}
               </div>
 
-              <!-- Question Image -->
-              <div
-                v-if="question.image_url"
-                class="question-image"
-              >
+              <div v-if="question.image_url" class="question-image">
                 <img
                   :src="question.image_url"
                   alt="Question image"
@@ -681,7 +526,6 @@
                 >
               </div>
 
-              <!-- Options -->
               <div class="options-grid">
                 <div
                   v-for="option in question.options"
@@ -690,8 +534,7 @@
                     'quiz-option',
                     {
                       'correct-option':
-                        option.option_key ===
-                        question.correct_answer
+                        option.option_key === question.correct_answer
                     }
                   ]"
                 >
@@ -704,10 +547,7 @@
                   </div>
 
                   <v-icon
-                    v-if="
-                      option.option_key ===
-                        question.correct_answer
-                    "
+                    v-if="option.option_key === question.correct_answer"
                     size="18"
                     color="#4ADE80"
                   >
@@ -716,19 +556,11 @@
                 </div>
               </div>
 
-              <!-- Explanation -->
-              <div
-                v-if="question.explanation"
-                class="explanation-box"
-              >
+              <div v-if="question.explanation" class="explanation-box">
                 <div class="explanation-heading">
-                  <v-icon
-                    left
-                    size="17"
-                  >
+                  <v-icon left size="17">
                     mdi-lightbulb-outline
                   </v-icon>
-
                   Explanation
                 </div>
 
@@ -740,30 +572,19 @@
           </div>
 
           <!-- No Questions -->
-          <div
-            v-else
-            class="dialog-empty"
-          >
+          <div v-else class="dialog-empty">
             <v-icon size="46">
               mdi-help-circle-outline
             </v-icon>
-
             <div>
               No questions found for this paper.
             </div>
           </div>
         </v-card-text>
 
-        <!-- Dialog Footer -->
         <v-card-actions class="dialog-footer">
-          <div
-            v-if="selectedPaper"
-            class="footer-question-count"
-          >
-            {{ selectedPaper.questions
-              ? selectedPaper.questions.length
-              : 0
-            }}
+          <div v-if="selectedPaper" class="footer-question-count">
+            {{ selectedPaper.questions ? selectedPaper.questions.length : 0 }}
             Questions
           </div>
 
@@ -785,7 +606,6 @@
             <v-icon left size="17">
               mdi-pencil-outline
             </v-icon>
-
             Edit Paper
           </v-btn>
         </v-card-actions>
@@ -795,10 +615,7 @@
     <!-- =====================================================
          DELETE DIALOG
     ====================================================== -->
-    <v-dialog
-      v-model="deleteDialog"
-      max-width="470"
-    >
+    <v-dialog v-model="deleteDialog" max-width="470">
       <v-card class="dialog-card">
         <v-card-text class="delete-dialog-body">
           <div class="delete-icon">
@@ -812,11 +629,7 @@
           </div>
 
           <div class="delete-paper-name">
-            {{
-              paperToDelete
-                ? paperToDelete.title
-                : ''
-            }}
+            {{ paperToDelete ? paperToDelete.title : '' }}
           </div>
 
           <div class="delete-message">
@@ -844,7 +657,6 @@
             <v-icon left size="17">
               mdi-delete-outline
             </v-icon>
-
             Delete Paper
           </v-btn>
         </v-card-actions>
@@ -884,18 +696,9 @@ export default {
       ),
 
       mediums: [
-        {
-          text: 'Sinhala',
-          value: 'si'
-        },
-        {
-          text: 'English',
-          value: 'en'
-        },
-        {
-          text: 'Tamil',
-          value: 'ta'
-        }
+        { text: 'Sinhala', value: 'si' },
+        { text: 'English', value: 'en' },
+        { text: 'Tamil', value: 'ta' }
       ],
 
       pagination: {
@@ -906,11 +709,9 @@ export default {
       },
 
       selectedPaper: null,
-
       viewDialog: false,
 
       deleteDialog: false,
-
       paperToDelete: null
     }
   },
@@ -943,26 +744,18 @@ export default {
   },
 
   methods: {
-
     // =====================================================
     // LOAD GRADES
     // =====================================================
     async loadGrades () {
       try {
-        const response =
-          await this.$axios.get(
-            '/public/grades'
-          )
+        const response = await this.$axios.get('/public/grades')
 
         if (response.data.success) {
-          this.grades =
-            response.data.data || []
+          this.grades = response.data.data || []
         }
       } catch (error) {
-        console.error(
-          'Unable to load grades:',
-          error
-        )
+        console.error('Unable to load grades:', error)
       }
     },
 
@@ -971,20 +764,13 @@ export default {
     // =====================================================
     async loadSubjects () {
       try {
-        const response =
-          await this.$axios.get(
-            '/public/subjects'
-          )
+        const response = await this.$axios.get('/public/subjects')
 
         if (response.data.success) {
-          this.subjects =
-            response.data.data || []
+          this.subjects = response.data.data || []
         }
       } catch (error) {
-        console.error(
-          'Unable to load subjects:',
-          error
-        )
+        console.error('Unable to load subjects:', error)
       }
     },
 
@@ -996,91 +782,63 @@ export default {
 
       try {
         const params = {
-          page:
-            this.pagination.currentPage
+          page: this.pagination.currentPage
         }
 
         if (this.filters.grade_id) {
-          params.grade_id =
-            this.filters.grade_id
+          params.grade_id = this.filters.grade_id
         }
 
         if (this.filters.subject_id) {
-          params.subject_id =
-            this.filters.subject_id
+          params.subject_id = this.filters.subject_id
         }
 
         if (this.filters.year) {
-          params.year =
-            this.filters.year
+          params.year = this.filters.year
         }
 
         if (this.filters.medium) {
-          params.medium =
-            this.filters.medium
+          params.medium = this.filters.medium
         }
 
-        const response =
-          await this.$axios.get(
-            '/admin/past-papers',
-            {
-              params
-            }
-          )
+        const response = await this.$axios.get('/admin/past-papers', {
+          params
+        })
 
-        const data =
-          response.data
+        const data = response.data
 
         if (!data.success) {
-          throw new Error(
-            data.message ||
-            'Unable to load past papers.'
-          )
+          throw new Error(data.message || 'Unable to load past papers.')
         }
 
-        const result =
-          data.data || {}
+        const result = data.data || {}
 
-        this.pastPapers =
-          result.data || []
+        this.pastPapers = result.data || []
 
-        this.totalPapers =
-          result.total ||
-          this.pastPapers.length
+        this.totalPapers = result.total || this.pastPapers.length
 
-        this.totalQuestions =
-          this.pastPapers.reduce(
-            (total, paper) =>
-              total +
-              Number(
-                paper.total_questions || 0
-              ),
-            0
-          )
-
-        this.pagination.currentPage =
-          result.current_page ||
-          1
-
-        this.pagination.lastPage =
-          result.last_page ||
-          1
-
-        this.pagination.perPage =
-          result.per_page ||
-          20
-
-        this.pagination.total =
-          result.total ||
-          this.pastPapers.length
-      } catch (error) {
-        this.handleApiError(
-          error,
-          'Unable to load past papers.'
+        this.totalQuestions = this.pastPapers.reduce(
+          (total, paper) => total + Number(paper.total_questions || 0),
+          0
         )
+
+        this.pagination.currentPage = result.current_page || 1
+        this.pagination.lastPage = result.last_page || 1
+        this.pagination.perPage = result.per_page || 20
+        this.pagination.total = result.total || this.pastPapers.length
+      } catch (error) {
+        this.handleApiError(error, 'Unable to load past papers.')
       } finally {
         this.loading = false
       }
+    },
+
+    // =====================================================
+    // FILTER CHANGED (go back to page 1, then reload)
+    // =====================================================
+    onFilterChange () {
+      this.pagination.currentPage = 1
+      this.loadPastPapers()
     },
 
     // =====================================================
@@ -1092,30 +850,21 @@ export default {
       this.viewDialog = true
 
       try {
-        const response =
-          await this.$axios.get(
-            `/admin/past-papers/${paper.id}`
-          )
+        const response = await this.$axios.get(
+          `/admin/past-papers/${paper.id}`
+        )
 
-        const data =
-          response.data
+        const data = response.data
 
         if (!data.success) {
-          throw new Error(
-            data.message ||
-            'Unable to load past paper.'
-          )
+          throw new Error(data.message || 'Unable to load past paper.')
         }
 
-        this.selectedPaper =
-          data.data
+        this.selectedPaper = data.data
       } catch (error) {
         this.viewDialog = false
 
-        this.handleApiError(
-          error,
-          'Unable to load past paper.'
-        )
+        this.handleApiError(error, 'Unable to load past paper.')
       } finally {
         this.loadingView = false
       }
@@ -1141,8 +890,7 @@ export default {
         return
       }
 
-      const id =
-        this.selectedPaper.id
+      const id = this.selectedPaper.id
 
       this.viewDialog = false
 
@@ -1173,34 +921,24 @@ export default {
       this.deleting = true
 
       try {
-        const response =
-          await this.$axios.delete(
-            `/admin/past-papers/${this.paperToDelete.id}`
-          )
+        const response = await this.$axios.delete(
+          `/admin/past-papers/${this.paperToDelete.id}`
+        )
 
-        const data =
-          response.data
+        const data = response.data
 
         if (!data.success) {
-          throw new Error(
-            data.message ||
-            'Unable to delete past paper.'
-          )
+          throw new Error(data.message || 'Unable to delete past paper.')
         }
 
-        this.showSuccess(
-          'Past paper deleted successfully.'
-        )
+        this.showSuccess('Past paper deleted successfully.')
 
         this.deleteDialog = false
         this.paperToDelete = null
 
         await this.loadPastPapers()
       } catch (error) {
-        this.handleApiError(
-          error,
-          'Unable to delete past paper.'
-        )
+        this.handleApiError(error, 'Unable to delete past paper.')
       } finally {
         this.deleting = false
       }
@@ -1226,15 +964,11 @@ export default {
     // MEDIUM NAME
     // =====================================================
     getMediumName (medium) {
-      const item =
-        this.mediums.find(
-          mediumItem =>
-            mediumItem.value === medium
-        )
+      const item = this.mediums.find(
+        mediumItem => mediumItem.value === medium
+      )
 
-      return item
-        ? item.text
-        : medium
+      return item ? item.text : medium
     },
 
     // =====================================================
@@ -1259,56 +993,30 @@ export default {
     // =====================================================
     // API ERROR
     // =====================================================
-    handleApiError (
-      error,
-      fallbackMessage
-    ) {
-      console.error(
-        'Past Paper API Error:',
-        error
-      )
+    handleApiError (error, fallbackMessage) {
+      console.error('Past Paper API Error:', error)
 
-      if (
-        error.response &&
-        error.response.data
-      ) {
-        const responseData =
-          error.response.data
+      if (error.response && error.response.data) {
+        const responseData = error.response.data
 
-        if (
-          responseData.errors
-        ) {
-          const firstError =
-            Object.values(
-              responseData.errors
-            )[0]
+        if (responseData.errors) {
+          const firstError = Object.values(responseData.errors)[0]
 
-          if (
-            Array.isArray(firstError) &&
-            firstError.length
-          ) {
-            this.showError(
-              firstError[0]
-            )
+          if (Array.isArray(firstError) && firstError.length) {
+            this.showError(firstError[0])
 
             return
           }
         }
 
-        if (
-          responseData.message
-        ) {
-          this.showError(
-            responseData.message
-          )
+        if (responseData.message) {
+          this.showError(responseData.message)
 
           return
         }
       }
 
-      this.showError(
-        fallbackMessage
-      )
+      this.showError(fallbackMessage)
     },
 
     // =====================================================
@@ -1420,25 +1128,10 @@ export default {
   justify-content: center;
 }
 
-.summary-icon.cyan {
-  background: rgba(34, 211, 238, 0.1);
-  color: #22d3ee;
-}
-
-.summary-icon.purple {
-  background: rgba(139, 92, 246, 0.1);
-  color: #a78bfa;
-}
-
-.summary-icon.green {
-  background: rgba(34, 197, 94, 0.1);
-  color: #4ade80;
-}
-
-.summary-icon.amber {
-  background: rgba(245, 158, 11, 0.1);
-  color: #fbbf24;
-}
+.summary-icon.cyan { background: rgba(34, 211, 238, 0.1); color: #22d3ee; }
+.summary-icon.purple { background: rgba(139, 92, 246, 0.1); color: #a78bfa; }
+.summary-icon.green { background: rgba(34, 197, 94, 0.1); color: #4ade80; }
+.summary-icon.amber { background: rgba(245, 158, 11, 0.1); color: #fbbf24; }
 
 .summary-label {
   color: #64748b;
@@ -1501,7 +1194,8 @@ export default {
   border-color: #334155 !important;
 }
 
-.dark-field >>> input {
+.dark-field >>> input,
+.dark-field >>> .v-select__selection {
   color: #f8fafc !important;
 }
 
@@ -1515,16 +1209,19 @@ export default {
 }
 
 /* =========================================================
-   LOADING
+   LOADING / EMPTY
 ========================================================= */
 
-.loading-card {
-  min-height: 300px;
+.loading-card,
+.empty-card {
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
 }
+
+.loading-card { min-height: 300px; }
+.empty-card { min-height: 330px; }
 
 .loading-title {
   color: #e2e8f0;
@@ -1537,18 +1234,6 @@ export default {
   color: #64748b;
   font-size: 12px;
   margin-top: 5px;
-}
-
-/* =========================================================
-   EMPTY
-========================================================= */
-
-.empty-card {
-  min-height: 330px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
 }
 
 .empty-icon {
@@ -1577,40 +1262,67 @@ export default {
 }
 
 /* =========================================================
-   PAPER GRID
+   LIST VIEW
 ========================================================= */
 
-.papers-grid {
+.list-card {
+  overflow: hidden;
+}
+
+/* Shared column layout for the header and every row */
+.list-head,
+.list-row {
   display: grid;
   grid-template-columns:
-    repeat(3, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.paper-card {
-  position: relative;
-  min-width: 0;
-  padding: 19px;
-  background: #111827;
-  border: 1px solid #1f2937;
-  border-radius: 14px;
-  transition:
-    transform 0.18s ease,
-    border-color 0.18s ease,
-    box-shadow 0.18s ease;
-}
-
-.paper-card:hover {
-  transform: translateY(-2px);
-  border-color: #334155;
-  box-shadow:
-    0 12px 28px rgba(0, 0, 0, 0.18);
-}
-
-.paper-card-top {
-  display: flex;
+    72px
+    minmax(220px, 1fr)
+    110px
+    150px
+    100px
+    90px
+    120px;
   align-items: center;
-  justify-content: space-between;
+  column-gap: 16px;
+  padding: 0 20px;
+}
+
+.list-head {
+  min-height: 46px;
+  background: rgba(148, 163, 184, 0.05);
+  border-bottom: 1px solid #1f2937;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.list-head .col-questions,
+.list-head .col-actions,
+.list-row .col-questions,
+.list-row .col-actions {
+  text-align: right;
+}
+
+.list-row {
+  min-height: 68px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #1f2937;
+  border-left: 3px solid transparent;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.list-row:last-child {
+  border-bottom: none;
+}
+
+.list-row:hover,
+.list-row:focus-visible {
+  background: rgba(34, 211, 238, 0.045);
+  border-left-color: #22d3ee;
+  outline: none;
 }
 
 .paper-year {
@@ -1627,98 +1339,49 @@ export default {
   font-weight: 800;
 }
 
-.menu-btn {
-  color: #64748b !important;
+.col-title {
+  min-width: 0;
 }
 
 .paper-title {
   color: #f8fafc;
-  font-size: 16px;
-  font-weight: 800;
-  line-height: 1.4;
-  margin-top: 14px;
-  min-height: 45px;
-}
-
-.paper-meta-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px 15px;
-  margin-top: 11px;
-}
-
-.meta-item {
-  display: flex;
-  align-items: center;
-  color: #94a3b8;
-  font-size: 11px;
-}
-
-.meta-item >>> .v-icon {
-  color: #64748b;
-}
-
-.paper-divider {
-  height: 1px;
-  background: #1f2937;
-  margin: 17px 0;
-}
-
-.paper-stats {
-  display: flex;
-  align-items: center;
-  gap: 38px;
-}
-
-.stat-label {
-  color: #64748b;
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
-
-.stat-value {
-  color: #cbd5e1;
-  font-size: 12px;
+  font-size: 14.5px;
   font-weight: 700;
-  margin-top: 4px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
+
+.row-meta {
+  display: none;
+  color: #64748b;
+  font-size: 11.5px;
+  margin-top: 3px;
+}
+
+.chip-cyan { background: rgba(34, 211, 238, 0.12) !important; color: #22d3ee !important; }
+.chip-violet { background: rgba(139, 92, 246, 0.14) !important; color: #a78bfa !important; }
+.chip-green { background: rgba(52, 211, 153, 0.14) !important; color: #34d399 !important; }
 
 .question-stat {
   color: #22d3ee;
+  font-size: 14px;
+  font-weight: 800;
 }
 
-.paper-actions {
+.row-actions {
   display: flex;
   align-items: center;
-  margin-top: 17px;
-  padding-top: 13px;
-  border-top: 1px solid #1f2937;
+  justify-content: flex-end;
+  gap: 2px;
 }
 
-.view-btn {
-  color: #22d3ee !important;
-}
-
-.edit-btn {
-  color: #a78bfa !important;
-}
-
-.delete-btn {
-  color: #64748b !important;
-  margin-left: auto;
-}
-
-.delete-btn:hover {
-  color: #f87171 !important;
-}
-
-.action-menu {
-  min-width: 155px;
-  background: #111827 !important;
-  border: 1px solid #334155;
-}
+.act-view { color: #22d3ee !important; }
+.act-edit { color: #a78bfa !important; }
+.act-delete { color: #64748b !important; }
+.act-delete:hover { color: #f87171 !important; }
 
 /* =========================================================
    PAGINATION
@@ -1959,25 +1622,10 @@ export default {
    DIFFICULTY
 ========================================================= */
 
-.difficulty-easy {
-  background: rgba(34, 197, 94, 0.12) !important;
-  color: #4ade80 !important;
-}
-
-.difficulty-medium {
-  background: rgba(245, 158, 11, 0.12) !important;
-  color: #fbbf24 !important;
-}
-
-.difficulty-hard {
-  background: rgba(239, 68, 68, 0.12) !important;
-  color: #f87171 !important;
-}
-
-.difficulty-default {
-  background: #1e293b !important;
-  color: #94a3b8 !important;
-}
+.difficulty-easy { background: rgba(34, 197, 94, 0.12) !important; color: #4ade80 !important; }
+.difficulty-medium { background: rgba(245, 158, 11, 0.12) !important; color: #fbbf24 !important; }
+.difficulty-hard { background: rgba(239, 68, 68, 0.12) !important; color: #f87171 !important; }
+.difficulty-default { background: #1e293b !important; color: #94a3b8 !important; }
 
 /* =========================================================
    DELETE DIALOG
@@ -2035,13 +1683,29 @@ export default {
    RESPONSIVE
 ========================================================= */
 
+/* Medium screens: drop the Subject and Medium columns, keep the rest */
 @media (max-width: 1100px) {
-  .papers-grid {
+  .list-head,
+  .list-row {
     grid-template-columns:
-      repeat(2, minmax(0, 1fr));
+      72px
+      minmax(180px, 1fr)
+      110px
+      90px
+      110px;
+  }
+
+  .col-subject,
+  .col-medium {
+    display: none;
+  }
+
+  .row-meta {
+    display: block;
   }
 }
 
+/* Small screens: year, title (with meta line) and actions only */
 @media (max-width: 760px) {
   .page-header {
     align-items: flex-start;
@@ -2056,16 +1720,28 @@ export default {
     flex: 1;
   }
 
-  .papers-grid {
-    grid-template-columns: 1fr;
+  .filter-header {
+    align-items: flex-start;
+  }
+
+  .list-head {
+    display: none;
+  }
+
+  .list-row {
+    grid-template-columns: 60px minmax(0, 1fr) auto;
+    column-gap: 12px;
+    padding-left: 14px;
+    padding-right: 10px;
+  }
+
+  .col-grade,
+  .col-questions {
+    display: none;
   }
 
   .options-grid {
     grid-template-columns: 1fr;
-  }
-
-  .filter-header {
-    align-items: flex-start;
   }
 }
 </style>
