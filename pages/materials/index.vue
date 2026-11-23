@@ -288,6 +288,7 @@
             class="dark-field mt-4"
           />
 
+          <!-- Grade (school + government) -->
           <v-select
             v-model="uploadForm.grade_id"
             :items="grades"
@@ -299,7 +300,41 @@
             class="dark-field"
           />
 
+          <!-- Government Exam Selection -->
           <v-select
+            v-if="isGovernmentUpload"
+            v-model="uploadForm.government_exam_id"
+            :items="governmentExams"
+            item-text="name"
+            item-value="id"
+            label="Select Exam Type"
+            :loading="governmentExamsLoading"
+            :disabled="!uploadForm.grade_id || governmentExamsLoading"
+            no-data-text="No government exams available"
+            outlined
+            required
+            class="dark-field"
+          />
+
+          <!-- Government Exam Subject -->
+          <v-select
+            v-if="isGovernmentUpload"
+            v-model="uploadForm.government_exam_subject_id"
+            :items="governmentExamSubjects"
+            item-text="name"
+            item-value="id"
+            label="Select Exam Subject"
+            :loading="governmentSubjectsLoading"
+            :disabled="!uploadForm.government_exam_id || governmentSubjectsLoading"
+            no-data-text="No subjects available for this exam"
+            outlined
+            required
+            class="dark-field"
+          />
+
+          <!-- Normal School Subject -->
+          <v-select
+            v-if="!isGovernmentUpload"
             v-model="uploadForm.subject_id"
             :items="subjects"
             item-text="name"
@@ -378,6 +413,12 @@ export default {
       grades: [],
       subjects: [],
 
+      governmentExams: [],
+      governmentExamSubjects: [],
+
+      governmentExamsLoading: false,
+      governmentSubjectsLoading: false,
+
       selectedMaterial: null,
       viewDialog: false,
       uploadDialog: false,
@@ -408,6 +449,10 @@ export default {
         title: '',
         grade_id: null,
         subject_id: null,
+
+        government_exam_id: null,
+        government_exam_subject_id: null,
+
         medium: 'si',
         material_type: 'lesson',
         file: null
@@ -426,18 +471,65 @@ export default {
     }
   },
 
+  computed: {
+    isGovernmentUpload () {
+      const selectedGrade = this.grades.find(
+        grade => Number(grade.id) === Number(this.uploadForm.grade_id)
+      )
+
+      if (!selectedGrade) {
+        return false
+      }
+
+      const category = String(selectedGrade.category || '').toLowerCase()
+      const slug = String(selectedGrade.slug || '').toLowerCase()
+
+      return (
+        slug === 'gov' ||
+        category === 'government exam' ||
+        category === 'gov'
+      )
+    }
+  },
+
   watch: {
     // Upload dialog — grade change resets subject and reloads list.
+    // Also handles Government Exam flow.
     'uploadForm.grade_id' (newValue, oldValue) {
       if (newValue === oldValue) {
         return
       }
 
       this.uploadForm.subject_id = null
+      this.uploadForm.government_exam_id = null
+      this.uploadForm.government_exam_subject_id = null
+
       this.subjects = []
+      this.governmentExams = []
+      this.governmentExamSubjects = []
+
+      if (!newValue) {
+        return
+      }
+
+      if (this.isGovernmentUpload) {
+        this.loadGovernmentExams()
+      } else {
+        this.loadSubjects(newValue)
+      }
+    },
+
+    // Upload dialog — government exam change reloads its subjects.
+    'uploadForm.government_exam_id' (newValue, oldValue) {
+      if (newValue === oldValue) {
+        return
+      }
+
+      this.uploadForm.government_exam_subject_id = null
+      this.governmentExamSubjects = []
 
       if (newValue) {
-        this.loadSubjects(newValue)
+        this.loadGovernmentExamSubjects(newValue)
       }
     },
 
@@ -527,23 +619,25 @@ export default {
           return
         }
 
-        let response
-
         const category = String(
           selectedGrade.category || ''
         ).toLowerCase()
 
         const slug = String(selectedGrade.slug || '').toLowerCase()
 
-        if (slug === 'gov' || category === 'government exam' || category === 'gov') {
-          response = await this.$axios.get('/public/subjects', {
-            params: { grade_category: 'gov' }
-          })
-        } else {
-          response = await this.$axios.get('/public/subjects', {
-            params: { grade_id: gradeId }
-          })
+        // Government exams use a separate subject API.
+        if (
+          slug === 'gov' ||
+          category === 'government exam' ||
+          category === 'gov'
+        ) {
+          this.subjects = []
+          return
         }
+
+        const response = await this.$axios.get('/public/subjects', {
+          params: { grade_id: gradeId }
+        })
 
         const data = response.data
 
@@ -551,9 +645,10 @@ export default {
           this.subjects = data.data || []
         } else {
           this.subjects = []
-          this.$toast?.error(
-            (data && data.message) || 'Unable to load subjects.'
-          ) || alert((data && data.message) || 'Unable to load subjects.')
+
+          const message = data?.message || 'Unable to load subjects.'
+
+          this.$toast?.error(message) || alert(message)
         }
       } catch (error) {
         console.error('Failed to load subjects:', error)
@@ -566,6 +661,69 @@ export default {
         this.$toast?.error(message) || alert(message)
       } finally {
         this.subjectsLoading = false
+      }
+    },
+
+    // Loads the list of government exams (Exam Type dropdown).
+    async loadGovernmentExams () {
+      try {
+        this.governmentExamsLoading = true
+
+        const response = await this.$axios.get('/admin/government-exams', {
+          params: {
+            is_active: 1,
+            per_page: 100
+          }
+        })
+
+        this.governmentExams = response.data?.data?.data || []
+      } catch (error) {
+        console.error('Failed to load government exams:', error)
+
+        this.governmentExams = []
+
+        const message =
+          error.response?.data?.message || 'Failed to load government exams'
+
+        this.$toast?.error(message) || alert(message)
+      } finally {
+        this.governmentExamsLoading = false
+      }
+    },
+
+    // Loads the subjects belonging to a specific government exam.
+    async loadGovernmentExamSubjects (examId) {
+      if (!examId) {
+        this.governmentExamSubjects = []
+        return
+      }
+
+      try {
+        this.governmentSubjectsLoading = true
+
+        const response = await this.$axios.get(
+          '/admin/government-exam-subjects',
+          {
+            params: {
+              government_exam_id: examId,
+              is_active: 1,
+              per_page: 100
+            }
+          }
+        )
+
+        this.governmentExamSubjects = response.data?.data?.data || []
+      } catch (error) {
+        console.error('Failed to load government exam subjects:', error)
+
+        this.governmentExamSubjects = []
+
+        const message =
+          error.response?.data?.message || 'Failed to load exam subjects'
+
+        this.$toast?.error(message) || alert(message)
+      } finally {
+        this.governmentSubjectsLoading = false
       }
     },
 
@@ -595,11 +753,17 @@ export default {
 
     openUploadDialog () {
       this.subjects = []
+      this.governmentExams = []
+      this.governmentExamSubjects = []
 
       this.uploadForm = {
         title: '',
         grade_id: null,
         subject_id: null,
+
+        government_exam_id: null,
+        government_exam_subject_id: null,
+
         medium: 'si',
         material_type: 'lesson',
         file: null
@@ -611,11 +775,17 @@ export default {
     closeUploadDialog () {
       this.uploadDialog = false
       this.subjects = []
+      this.governmentExams = []
+      this.governmentExamSubjects = []
 
       this.uploadForm = {
         title: '',
         grade_id: null,
         subject_id: null,
+
+        government_exam_id: null,
+        government_exam_subject_id: null,
+
         medium: 'si',
         material_type: 'lesson',
         file: null
@@ -739,9 +909,20 @@ export default {
         return
       }
 
-      if (!this.uploadForm.subject_id) {
-        this.$toast?.error('Subject is required') || alert('Subject is required')
-        return
+      // Government vs School validation
+      if (this.isGovernmentUpload) {
+        if (!this.uploadForm.government_exam_id) {
+          this.$toast?.error('Government exam is required') || alert('Government exam is required')
+          return
+        }
+
+        if (!this.uploadForm.government_exam_subject_id) {
+          this.$toast?.error('Government exam subject is required') || alert('Government exam subject is required')
+          return
+        }
+      } else if (!this.uploadForm.subject_id) {
+          this.$toast?.error('Subject is required') || alert('Subject is required')
+          return
       }
 
       if (!this.uploadForm.medium) {
@@ -763,8 +944,19 @@ export default {
 
       try {
         const formData = new FormData()
-        formData.append('grade_id', this.uploadForm.grade_id)
-        formData.append('subject_id', this.uploadForm.subject_id)
+
+        // Government Exam: only send government_exam_subject_id
+        // School: send grade_id + subject_id
+        if (this.isGovernmentUpload) {
+          formData.append(
+            'government_exam_subject_id',
+            this.uploadForm.government_exam_subject_id
+          )
+        } else {
+          formData.append('grade_id', this.uploadForm.grade_id)
+          formData.append('subject_id', this.uploadForm.subject_id)
+        }
+
         formData.append('medium', this.uploadForm.medium)
         formData.append('title', this.uploadForm.title)
         formData.append('material_type', this.uploadForm.material_type)

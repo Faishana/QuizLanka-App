@@ -5,7 +5,7 @@
         Subjects
       </h1>
       <p class="page-subtitle">
-        Manage subjects, categories, grades and A/L streams.
+        Manage school subjects, categories, grades and A/L streams.
       </p>
     </div>
 
@@ -44,7 +44,6 @@
           </v-chip>
         </template>
 
-        <!-- Grades column: gracefully handle government subjects (no grades) -->
         <template #item.grades="{ item }">
           <div class="py-2">
             <template v-if="item.grades && item.grades.length">
@@ -159,9 +158,8 @@
               @change="onCategoryChange"
             />
 
-            <!-- Multiple Grade Selection (hidden for Government) -->
+            <!-- Multiple Grade Selection -->
             <v-select
-              v-if="form.grade_category !== 'gov'"
               ref="gradeSelect"
               v-model="form.grade_ids"
               :items="filteredGrades"
@@ -261,17 +259,6 @@
               </template>
             </v-select>
 
-            <!-- Government info banner -->
-            <v-alert
-              v-if="form.grade_category === 'gov'"
-              dense
-              text
-              type="info"
-              class="gov-info mb-4"
-            >
-              Government exam subjects are not tied to any grade or A/L stream.
-            </v-alert>
-
             <!-- Color -->
             <v-text-field
               v-model="form.color"
@@ -363,8 +350,7 @@ export default {
       categories: [
         { text: 'Grade 5 Scholarship', value: 'scholarship' },
         { text: 'Ordinary Level (O/L)', value: 'ol' },
-        { text: 'Advanced Level (A/L)', value: 'al' },
-        { text: 'Government Exams', value: 'gov' }
+        { text: 'Advanced Level (A/L)', value: 'al' }
       ],
 
       alStreams: [
@@ -597,16 +583,10 @@ export default {
 
     /**
      * Category change handler.
-     * Government subjects do not need grades or A/L streams.
+     * When category changes, clear grades that no longer belong to it,
+     * and clear A/L streams if the new category is not A/L.
      */
     onCategoryChange () {
-      // Government subjects do not need grades or A/L streams.
-      if (this.form.grade_category === 'gov') {
-        this.form.grade_ids = []
-        this.form.al_streams = []
-        return
-      }
-
       const allowedIds = this.grades
         .filter(
           g =>
@@ -689,9 +669,8 @@ export default {
         id: subject.id,
         name: subject.name || '',
         grade_category: category,
-        // Government subjects never carry grades or streams.
-        grade_ids: category === 'gov' ? [] : gradeIds,
-        al_streams: category === 'gov' ? [] : streams,
+        grade_ids: gradeIds,
+        al_streams: streams,
         color: subject.color || '#3B82F6',
         description: subject.description || '',
         icon: null
@@ -713,11 +692,10 @@ export default {
 
       const category = this.form.grade_category
 
-      // Validate grades only for non-government subjects.
+      // Validate grades.
       if (
-        category !== 'gov' &&
-        (!Array.isArray(this.form.grade_ids) ||
-          this.form.grade_ids.length === 0)
+        !Array.isArray(this.form.grade_ids) ||
+        this.form.grade_ids.length === 0
       ) {
         this.notify('error', 'Please select at least one grade')
         return
@@ -743,12 +721,9 @@ export default {
         formData.append('color', this.form.color || '#3B82F6')
         formData.append('description', this.form.description || '')
 
-        // Only send grade IDs for non-government subjects.
-        if (category !== 'gov') {
-          this.form.grade_ids.forEach((id) => {
-            formData.append('grade_ids[]', id)
-          })
-        }
+        this.form.grade_ids.forEach((id) => {
+          formData.append('grade_ids[]', id)
+        })
 
         // Only send A/L streams for A/L subjects.
         if (category === 'al') {
@@ -928,18 +903,6 @@ export default {
 }
 .dark-field ::v-deep .v-icon {
   color: #64748B !important;
-}
-
-/* Government info banner */
-.gov-info ::v-deep .v-alert__content {
-  color: #A5B4FC !important;
-  font-size: 13px;
-}
-::v-deep .v-alert.gov-info {
-  background: rgba(99, 102, 241, 0.12) !important;
-  border: 1px solid rgba(99, 102, 241, 0.28);
-  border-radius: 10px;
-  color: #A5B4FC !important;
 }
 
 /* Ensure the grades dropdown menu (rendered in body) is readable */

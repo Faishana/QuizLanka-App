@@ -6,10 +6,14 @@
     <div class="page-header">
       <div>
         <h1 class="page-title">
-          Quiz Entry
+          {{ editMode ? 'Edit Quiz' : 'Quiz Entry' }}
         </h1>
         <p class="page-subtitle">
-          Create a general quiz by entering its questions manually.
+          {{
+            editMode
+              ? 'Edit the quiz, questions and options.'
+              : 'Create a general quiz by entering its questions manually.'
+          }}
         </p>
       </div>
 
@@ -38,7 +42,23 @@
       </div>
     </div>
 
-    <v-row>
+    <!-- =========================
+         LOADING STATE
+    ========================== -->
+    <v-card v-if="loadingQuiz" class="panel-card mb-6" flat>
+      <v-card-text class="text-center py-10">
+        <v-progress-circular
+          indeterminate
+          color="#22D3EE"
+          size="42"
+        />
+        <div class="loading-text mt-4">
+          Loading quiz...
+        </div>
+      </v-card-text>
+    </v-card>
+
+    <v-row v-else>
       <!-- =========================================================
            MAIN COLUMN
       ========================================================== -->
@@ -78,6 +98,7 @@
                 />
               </v-col>
 
+              <!-- Grade -->
               <v-col cols="12" md="3">
                 <v-select
                   v-model="quiz.grade_id"
@@ -94,7 +115,8 @@
                 />
               </v-col>
 
-              <v-col v-if="isAlGrade" cols="12" md="3">
+              <!-- A/L Stream -->
+              <v-col v-if="isAlGrade && !isGovGrade" cols="12" md="3">
                 <v-select
                   v-model="quiz.al_stream"
                   :items="streamOptions"
@@ -108,7 +130,44 @@
                 />
               </v-col>
 
-              <v-col cols="12" :md="isAlGrade ? 3 : 5">
+              <!-- Government Exam Type -->
+              <v-col v-if="isGovGrade" cols="12" md="4">
+                <v-select
+                  v-model="quiz.government_exam_id"
+                  :items="governmentExams"
+                  item-text="name"
+                  item-value="id"
+                  label="Government Exam Type"
+                  placeholder="Select exam type"
+                  outlined
+                  dense
+                  hide-details
+                  class="dark-field"
+                  :loading="loadingGovernmentExams"
+                  :disabled="loadingGovernmentExams"
+                />
+              </v-col>
+
+              <!-- Government Exam Subject -->
+              <v-col v-if="isGovGrade" cols="12" md="5">
+                <v-select
+                  v-model="quiz.government_exam_subject_id"
+                  :items="governmentExamSubjects"
+                  item-text="name"
+                  item-value="id"
+                  label="Government Exam Subject"
+                  placeholder="Select exam subject"
+                  outlined
+                  dense
+                  hide-details
+                  class="dark-field"
+                  :loading="loadingGovernmentSubjects"
+                  :disabled="!quiz.government_exam_id || loadingGovernmentSubjects"
+                />
+              </v-col>
+
+              <!-- Normal School Subject -->
+              <v-col v-if="quiz.grade_id && !isGovGrade" cols="12" :md="isAlGrade ? 3 : 5">
                 <v-select
                   v-model="quiz.subject_id"
                   :items="filteredSubjects"
@@ -224,7 +283,6 @@
           </v-card-title>
 
           <v-card-text class="pt-5">
-            <!-- Question text -->
             <div class="field-label">
               Question <span class="required">*</span>
             </div>
@@ -238,7 +296,6 @@
               class="dark-field"
             />
 
-            <!-- Image -->
             <div class="field-label mt-5">
               Question image <span class="optional">Optional</span>
             </div>
@@ -277,7 +334,6 @@
               @change="onImageSelected"
             >
 
-            <!-- Options -->
             <div class="options-head mt-6">
               <div class="field-label mb-0">
                 Options <span class="required">*</span>
@@ -321,7 +377,6 @@
               </v-icon>
             </div>
 
-            <!-- Difficulty -->
             <div class="field-label mt-6">
               Difficulty
             </div>
@@ -338,7 +393,6 @@
               </button>
             </div>
 
-            <!-- Explanation -->
             <div class="field-label mt-6">
               Explanation <span class="optional">Optional</span>
             </div>
@@ -374,7 +428,7 @@
       </v-col>
 
       <!-- =========================================================
-           SIDEBAR: summary + entered questions + save
+           SIDEBAR
       ========================================================== -->
       <v-col cols="12" lg="4">
         <div class="sidebar">
@@ -387,6 +441,13 @@
               <div class="summary-meta">
                 <v-chip v-if="gradeName" x-small class="meta-chip chip-cyan">
                   {{ gradeName }}
+                </v-chip>
+                <v-chip
+                  v-if="isGovGrade && selectedGovernmentExamName"
+                  x-small
+                  class="meta-chip chip-cyan"
+                >
+                  {{ selectedGovernmentExamName }}
                 </v-chip>
                 <v-chip v-if="subjectName" x-small class="meta-chip chip-violet">
                   {{ subjectName }}
@@ -420,7 +481,6 @@
               />
             </v-card-text>
 
-            <!-- Entered questions -->
             <div v-if="questions.length" class="entered-list">
               <div
                 v-for="(q, index) in questions"
@@ -514,10 +574,22 @@
                 <v-icon left size="18">
                   mdi-content-save-outline
                 </v-icon>
-                Save quiz
+                {{ editMode ? 'Update quiz' : 'Save quiz' }}
               </v-btn>
 
               <v-btn
+                v-if="editMode"
+                block
+                text
+                class="clear-btn mt-2"
+                :disabled="saving"
+                @click="cancelEditMode"
+              >
+                Cancel edit
+              </v-btn>
+
+              <v-btn
+                v-else
                 block
                 text
                 class="clear-btn mt-2"
@@ -544,13 +616,13 @@
             </v-icon>
           </div>
           <div class="saved-title">
-            Quiz saved
+            {{ editMode ? 'Quiz updated' : 'Quiz saved' }}
           </div>
           <div class="saved-name">
             {{ savedSummary.title }}
           </div>
           <div class="saved-message">
-            {{ savedSummary.count }} questions saved successfully.
+            {{ savedSummary.count }} questions {{ editMode ? 'updated' : 'saved' }} successfully.
             <span v-if="savedSummary.id">
               Quiz ID: {{ savedSummary.id }}
             </span>
@@ -559,12 +631,24 @@
 
         <v-card-actions class="dialog-footer">
           <v-spacer />
-          <v-btn text class="clear-btn" @click="savedDialog = false">
-            Keep editing
-          </v-btn>
-          <v-btn class="primary-btn" @click="startNewQuiz">
-            Create another quiz
-          </v-btn>
+
+          <template v-if="editMode">
+            <v-btn text class="clear-btn" @click="savedDialog = false">
+              Keep editing
+            </v-btn>
+            <v-btn class="primary-btn" @click="goToQuizzes">
+              Back to Quizzes
+            </v-btn>
+          </template>
+
+          <template v-else>
+            <v-btn text class="clear-btn" @click="savedDialog = false">
+              Keep editing
+            </v-btn>
+            <v-btn class="primary-btn" @click="startNewQuiz">
+              Create another quiz
+            </v-btn>
+          </template>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -597,6 +681,8 @@ const emptyQuiz = () => ({
   grade_id: null,
   al_stream: null,
   subject_id: null,
+  government_exam_id: null,
+  government_exam_subject_id: null,
   medium: 'si',
   time_limit_minutes: 30,
   target_questions: 10,
@@ -611,27 +697,27 @@ export default {
       saving: false,
       loadingGrades: false,
       loadingSubjects: false,
+      loadingGovernmentExams: false,
+      loadingGovernmentSubjects: false,
+
+      // Edit mode
+      editMode: false,
+      editingQuizId: null,
+      loadingQuiz: false,
 
       savedDialog: false,
-      savedSummary: {
-        id: null,
-        title: '',
-        count: 0
-      },
+      savedSummary: { id: null, title: '', count: 0 },
 
-      snack: {
-        show: true,
-        text: '',
-        color: 'success'
-      },
+      snack: { show: true, text: '', color: 'success' },
 
-      // Loaded from Laravel API
       grades: [],
       subjects: [],
+      governmentExams: [],
+      governmentExamSubjects: [],
 
       streamOptions: [
         { text: 'Biological Science', value: 'bio' },
-        { text: 'Physical Science', value: 'maths' },
+        { text: 'Physical Science / Maths', value: 'maths' },
         { text: 'Technology', value: 'technology' },
         { text: 'Arts', value: 'arts' },
         { text: 'Commerce', value: 'commerce' }
@@ -652,11 +738,8 @@ export default {
       optionKeys: ['A', 'B', 'C', 'D'],
 
       quiz: emptyQuiz(),
-
       questions: [],
-
       current: emptyQuestion(),
-
       editingIndex: null
     }
   },
@@ -666,10 +749,7 @@ export default {
       const grade = this.grades.find(
         g => String(g.id) === String(this.quiz.grade_id)
       )
-
-      if (!grade) {
-        return false
-      }
+      if (!grade) { return false }
 
       const category = String(
         grade.category || grade.type || grade.level || ''
@@ -682,52 +762,43 @@ export default {
       return /grade\s*(12|13)\b/i.test(grade.name || '')
     },
 
-    isGovGrade (gradeId) {
+    isGovGrade () {
       const grade = this.grades.find(
-        item => Number(item.id) === Number(gradeId)
+        item => Number(item.id) === Number(this.quiz.grade_id)
       )
+      if (!grade) { return false }
 
-      return grade &&
-      String(grade.category).toLowerCase() === 'government exam'
+      const category = String(grade.category || '').toLowerCase()
+      const slug = String(grade.slug || '').toLowerCase()
+
+      return (
+        category === 'government exam' ||
+        category === 'gov' ||
+        slug === 'gov'
+      )
     },
 
     canSelectSubject () {
-      if (!this.quiz.grade_id) {
-        return false
-      }
-
-      if (this.isAlGrade) {
-        return !!this.quiz.al_stream
-      }
-
+      if (!this.quiz.grade_id || this.isGovGrade) { return false }
+      if (this.isAlGrade) { return !!this.quiz.al_stream }
       return true
     },
 
     subjectHint () {
-      if (!this.quiz.grade_id) {
-        return 'Select a grade first'
-      }
-
+      if (!this.quiz.grade_id) { return 'Select a grade first' }
+      if (this.isGovGrade) { return '' }
       if (this.isAlGrade && !this.quiz.al_stream) {
         return 'Select a stream first'
       }
-
-      if (this.loadingSubjects) {
-        return 'Loading subjects...'
-      }
-
+      if (this.loadingSubjects) { return 'Loading subjects...' }
       if (!this.subjects.length) {
         return 'No subjects available for this grade'
       }
-
       return ''
     },
 
     filteredSubjects () {
-      if (!this.canSelectSubject) {
-        return []
-      }
-
+      if (!this.canSelectSubject) { return [] }
       return this.subjects
     },
 
@@ -735,15 +806,28 @@ export default {
       const grade = this.grades.find(
         item => String(item.id) === String(this.quiz.grade_id)
       )
-
       return grade ? grade.name : ''
     },
 
+    selectedGovernmentExamName () {
+      const exam = this.governmentExams.find(
+        item => String(item.id) === String(this.quiz.government_exam_id)
+      )
+      return exam ? exam.name : ''
+    },
+
     subjectName () {
+      if (this.isGovGrade) {
+        const subject = this.governmentExamSubjects.find(
+          item =>
+            String(item.id) === String(this.quiz.government_exam_subject_id)
+        )
+        return subject ? subject.name : ''
+      }
+
       const subject = this.subjects.find(
         item => String(item.id) === String(this.quiz.subject_id)
       )
-
       return subject ? subject.name : ''
     },
 
@@ -751,16 +835,12 @@ export default {
       const medium = this.mediums.find(
         item => item.value === this.quiz.medium
       )
-
       return medium ? medium.text.replace(' Medium', '') : ''
     },
 
     progressPercentage () {
       const target = Number(this.quiz.target_questions)
-
-      if (!target || target < 1) {
-        return 0
-      }
+      if (!target || target < 1) { return 0 }
 
       return Math.min(
         Math.round((this.questions.length / target) * 100),
@@ -771,30 +851,59 @@ export default {
 
   watch: {
     'quiz.grade_id' (newValue, oldValue) {
-      if (newValue === oldValue) {
-        return
-      }
+      if (String(newValue) === String(oldValue)) { return }
+      if (this.loadingQuiz) { return }
 
       this.quiz.al_stream = null
       this.quiz.subject_id = null
+      this.quiz.government_exam_id = null
+      this.quiz.government_exam_subject_id = null
+
       this.subjects = []
+      this.governmentExams = []
+      this.governmentExamSubjects = []
+
+      if (!newValue) { return }
+
+      this.$nextTick(() => {
+        if (this.isGovGrade) {
+          this.loadGovernmentExams()
+        } else {
+          this.loadSubjects(newValue)
+        }
+      })
+    },
+
+    'quiz.government_exam_id' (newValue, oldValue) {
+      if (String(newValue) === String(oldValue)) { return }
+      if (this.loadingQuiz) { return }
+
+      this.quiz.government_exam_subject_id = null
+      this.governmentExamSubjects = []
 
       if (newValue) {
-        this.loadSubjects(newValue)
+        this.loadGovernmentExamSubjects(newValue)
       }
     },
 
     'quiz.al_stream' (newValue, oldValue) {
-      if (newValue === oldValue) {
-        return
-      }
+      if (newValue === oldValue) { return }
+      if (this.loadingQuiz) { return }
 
       this.quiz.subject_id = null
     }
   },
 
-  mounted () {
-    this.loadGrades()
+  async mounted () {
+    await this.loadGrades()
+
+    const editId = this.$route.query.edit
+
+    if (editId) {
+      this.editMode = true
+      this.editingQuizId = Number(editId)
+      await this.loadQuiz(this.editingQuizId)
+    }
   },
 
   beforeDestroy () {
@@ -808,38 +917,23 @@ export default {
     extractRows (response) {
       let result = response
 
-      if (result && result.data !== undefined) {
-        result = result.data
-      }
-
-      if (Array.isArray(result)) {
-        return result
-      }
-
+      if (result && result.data !== undefined) { result = result.data }
+      if (Array.isArray(result)) { return result }
       if (result && result.data && Array.isArray(result.data.data)) {
         return result.data.data
       }
-
-      if (result && Array.isArray(result.data)) {
-        return result.data
-      }
-
+      if (result && Array.isArray(result.data)) { return result.data }
       return []
     },
 
     async loadGrades () {
       this.loadingGrades = true
-
       try {
         const response = await this.$axios.$get('/admin/grades')
-
         this.grades = this.extractRows(response)
 
         if (!this.grades.length) {
-          this.notify(
-            'No grades found. Please check the grade API.',
-            'error'
-          )
+          this.notify('No grades found. Please check the grade API.', 'error')
         }
       } catch (error) {
         this.handleApiError(error, 'Unable to load grades.')
@@ -851,47 +945,180 @@ export default {
     async loadSubjects (gradeId) {
       if (!gradeId) {
         this.subjects = []
-        this.quiz.subject_id = null
+        if (!this.loadingQuiz) { this.quiz.subject_id = null }
+        return
+      }
+
+      if (this.isGovGrade) {
+        this.subjects = []
         return
       }
 
       try {
         this.loadingSubjects = true
 
-        // GOV grade
-        const selectedGrade = this.grades.find(
-          grade => Number(grade.id) === Number(gradeId)
+        const response = await this.$axios.$get(
+          `/admin/subjects/grade/${gradeId}`
         )
 
-        if (
-          selectedGrade &&
-          String(selectedGrade.category).toLowerCase() === 'government exam'
-        ) {
-          const response = await this.$axios.$get('/admin/subjects')
+        this.subjects = response.data || []
 
-          const allSubjects = response.data || []
-
-          this.subjects = allSubjects.filter(
-            subject =>
-              subject.grade_category === 'gov' &&
-              Boolean(subject.is_active)
-          )
-        } else {
-          // Normal grades (Scholarship / O/L / A/L)
-          const response = await this.$axios.$get(
-            `/admin/subjects/grade/${gradeId}`
-          )
-
-          this.subjects = response.data || []
+        if (!this.loadingQuiz) {
+          this.quiz.subject_id = null
         }
-
-        this.quiz.subject_id = null
       } catch (error) {
         console.error('Load subjects error:', error)
         this.subjects = []
         this.showMessage('Unable to load subjects.', 'error')
       } finally {
         this.loadingSubjects = false
+      }
+    },
+
+    async loadGovernmentExams () {
+      try {
+        this.loadingGovernmentExams = true
+
+        const response = await this.$axios.$get(
+          '/admin/government-exams',
+          {
+            params: { is_active: 1, per_page: 100 }
+          }
+        )
+
+        this.governmentExams = this.extractRows(response)
+      } catch (error) {
+        console.error('Load government exams error:', error)
+        this.governmentExams = []
+        this.notify('Unable to load government exams.', 'error')
+      } finally {
+        this.loadingGovernmentExams = false
+      }
+    },
+
+    async loadGovernmentExamSubjects (examId) {
+      if (!examId) {
+        this.governmentExamSubjects = []
+        return
+      }
+
+      try {
+        this.loadingGovernmentSubjects = true
+
+        const response = await this.$axios.$get(
+          '/admin/government-exam-subjects',
+          {
+            params: {
+              government_exam_id: examId,
+              is_active: 1,
+              per_page: 100
+            }
+          }
+        )
+
+        this.governmentExamSubjects = this.extractRows(response)
+      } catch (error) {
+        console.error('Load government exam subjects error:', error)
+        this.governmentExamSubjects = []
+        this.notify('Unable to load government exam subjects.', 'error')
+      } finally {
+        this.loadingGovernmentSubjects = false
+      }
+    },
+
+    /**
+     * Load an existing quiz for edit mode.
+     */
+    async loadQuiz (id) {
+      this.loadingQuiz = true
+
+      try {
+        const response = await this.$axios.$get(
+          `/admin/manual-quizzes/${id}`
+        )
+
+        if (!response || response.success !== true || !response.data) {
+          throw new Error(
+            (response && response.message) || 'Unable to load quiz.'
+          )
+        }
+
+        const quizData = response.data
+        const govSubject = quizData.government_exam_subject || null
+
+        // Load basic quiz details first.
+        this.quiz = {
+          title: quizData.title || '',
+          topic: quizData.topic || '',
+          description: quizData.description || '',
+
+          grade_id: quizData.grade_id || null,
+          subject_id: quizData.subject_id || null,
+
+          government_exam_id: govSubject
+            ? govSubject.government_exam_id
+            : null,
+
+          government_exam_subject_id:
+            quizData.government_exam_subject_id ||
+            (govSubject ? govSubject.id : null),
+
+          al_stream: quizData.al_stream || null,
+          medium: quizData.medium || 'si',
+          time_limit_minutes: Number(quizData.time_limit_minutes || 30),
+
+          target_questions: Number(
+            quizData.total_questions ||
+            (quizData.questions ? quizData.questions.length : 10)
+          ),
+
+          shuffle_questions: Boolean(quizData.shuffle_questions)
+        }
+
+        // Load questions.
+        this.questions = (quizData.questions || []).map((question) => {
+          const optionsMap = { A: '', B: '', C: '', D: '' }
+
+          ;(question.options || []).forEach((opt) => {
+            if (optionsMap[opt.option_key] !== undefined) {
+              optionsMap[opt.option_key] = opt.option_text || ''
+            }
+          })
+
+          return {
+            temp_id: `existing-${question.id}`,
+            id: question.id,
+            question_text: question.question_text || '',
+            image_url: question.image_url || null,
+            options: optionsMap,
+            correct_answer: question.correct_answer || '',
+            difficulty: question.difficulty || 'medium',
+            explanation: question.explanation || ''
+          }
+        })
+
+        // Load dependent dropdowns.
+        if (this.isGovGrade) {
+          await this.loadGovernmentExams()
+
+          if (this.quiz.government_exam_id) {
+            await this.loadGovernmentExamSubjects(
+              this.quiz.government_exam_id
+            )
+          }
+        } else if (this.quiz.grade_id) {
+          await this.loadSubjects(this.quiz.grade_id)
+        }
+
+        this.editingIndex = null
+        this.current = emptyQuestion()
+        this.resetImageInput()
+      } catch (error) {
+        console.error('Load quiz error:', error)
+        this.handleApiError(error, 'Unable to load quiz.')
+        this.$router.replace('/questions/manual-quizzes')
+      } finally {
+        this.loadingQuiz = false
       }
     },
 
@@ -906,34 +1133,26 @@ export default {
       }
 
       if (!response) {
-        this.notify(
-          (error && error.message) || defaultMessage,
-          'error'
-        )
+        this.notify((error && error.message) || defaultMessage, 'error')
         return
       }
 
-      const message = data && data.message
-        ? data.message
-        : defaultMessage
-
+      const message = data && data.message ? data.message : defaultMessage
       this.notify(message, 'error')
     },
 
     /* -------------------------------- Feedback -------------------------------- */
 
     notify (text, color = 'success') {
-      this.snack = {
-        show: true,
-        text,
-        color
-      }
+      this.snack = { show: true, text, color }
+    },
+
+    showMessage (text, color = 'success') {
+      this.notify(text, color)
     },
 
     capitalize (text) {
-      return text
-        ? text.charAt(0).toUpperCase() + text.slice(1)
-        : ''
+      return text ? text.charAt(0).toUpperCase() + text.slice(1) : ''
     },
 
     /* -------------------------------- Images -------------------------------- */
@@ -946,17 +1165,10 @@ export default {
 
     onImageSelected (event) {
       const file = event.target.files && event.target.files[0]
-
-      if (!file) {
-        return
-      }
+      if (!file) { return }
 
       if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-        this.notify(
-          'Please choose a JPG, PNG or WEBP image.',
-          'error'
-        )
-
+        this.notify('Please choose a JPG, PNG or WEBP image.', 'error')
         return this.resetImageInput()
       }
 
@@ -966,10 +1178,7 @@ export default {
       }
 
       this.revokeImage(this.current.image_url)
-
-      // Local preview only. Not uploaded to the server yet.
       this.current.image_url = URL.createObjectURL(file)
-
       this.resetImageInput()
     },
 
@@ -985,12 +1194,8 @@ export default {
       }
     },
 
-    // Never send blob: URLs to the backend.
     sanitizeImageUrl (url) {
-      if (!url) {
-        return null
-      }
-
+      if (!url) { return null }
       return String(url).startsWith('blob:') ? null : url
     },
 
@@ -1018,11 +1223,7 @@ export default {
       }
 
       if (!question.correct_answer) {
-        this.notify(
-          'Click a letter to mark the correct answer.',
-          'error'
-        )
-
+        this.notify('Click a letter to mark the correct answer.', 'error')
         return false
       }
 
@@ -1030,9 +1231,7 @@ export default {
     },
 
     saveQuestion () {
-      if (!this.validateQuestion()) {
-        return
-      }
+      if (!this.validateQuestion()) { return }
 
       const question = this.current
 
@@ -1041,8 +1240,11 @@ export default {
           ? `q-${Date.now()}-${Math.random()}`
           : this.questions[this.editingIndex].temp_id,
 
-        question_text: question.question_text.trim(),
+        id: this.editingIndex === null
+          ? null
+          : (this.questions[this.editingIndex].id || null),
 
+        question_text: question.question_text.trim(),
         image_url: this.sanitizeImageUrl(question.image_url),
 
         options: {
@@ -1053,9 +1255,7 @@ export default {
         },
 
         correct_answer: question.correct_answer,
-
         difficulty: question.difficulty || 'medium',
-
         explanation: question.explanation
           ? question.explanation.trim()
           : ''
@@ -1065,7 +1265,6 @@ export default {
         this.questions.push(built)
         this.notify('Question added.')
       } else {
-        // Preserve current preview if user did not change the image.
         const previousPreview = this.questions[this.editingIndex].image_url
         built.image_url = built.image_url || previousPreview
 
@@ -1095,10 +1294,7 @@ export default {
       const element = this.$refs.entryCard && this.$refs.entryCard.$el
 
       if (element && element.scrollIntoView) {
-        element.scrollIntoView({
-          behavior: 'smooth',
-          block: 'start'
-        })
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' })
       }
     },
 
@@ -1128,6 +1324,7 @@ export default {
 
       const copy = {
         ...question,
+        id: null,
         temp_id: `q-${Date.now()}-${Math.random()}`,
         options: { ...question.options }
       }
@@ -1143,13 +1340,9 @@ export default {
 
     moveQuestion (index, direction) {
       const target = index + direction
-
-      if (target < 0 || target >= this.questions.length) {
-        return
-      }
+      if (target < 0 || target >= this.questions.length) { return }
 
       const moved = this.questions.splice(index, 1)[0]
-
       this.questions.splice(target, 0, moved)
 
       if (this.editingIndex === index) {
@@ -1161,7 +1354,6 @@ export default {
 
     removeQuestion (index) {
       const removed = this.questions.splice(index, 1)[0]
-
       this.revokeImage(removed.image_url)
 
       if (this.editingIndex === index) {
@@ -1186,12 +1378,20 @@ export default {
         return this.fail('Select a grade.')
       }
 
-      if (this.isAlGrade && !quiz.al_stream) {
-        return this.fail('Select the A/L stream.')
-      }
-
-      if (!quiz.subject_id) {
-        return this.fail('Select a subject.')
+      if (this.isGovGrade) {
+        if (!quiz.government_exam_id) {
+          return this.fail('Select a Government Exam Type.')
+        }
+        if (!quiz.government_exam_subject_id) {
+          return this.fail('Select a Government Exam Subject.')
+        }
+      } else {
+        if (this.isAlGrade && !quiz.al_stream) {
+          return this.fail('Select the A/L stream.')
+        }
+        if (!quiz.subject_id) {
+          return this.fail('Select a subject.')
+        }
       }
 
       if (!quiz.medium) {
@@ -1199,15 +1399,8 @@ export default {
       }
 
       const minutes = Number(quiz.time_limit_minutes)
-
-      if (
-        !Number.isInteger(minutes) ||
-        minutes < 1 ||
-        minutes > 600
-      ) {
-        return this.fail(
-          'Time limit must be between 1 and 600 minutes.'
-        )
+      if (!Number.isInteger(minutes) || minutes < 1 || minutes > 600) {
+        return this.fail('Time limit must be between 1 and 600 minutes.')
       }
 
       if (!this.questions.length) {
@@ -1215,15 +1408,16 @@ export default {
       }
 
       if (this.editingIndex !== null) {
-        return this.fail(
-          'Finish updating the question you are editing first.'
-        )
+        return this.fail('Finish updating the question you are editing first.')
       }
 
-      if (this.loadingGrades || this.loadingSubjects) {
-        return this.fail(
-          'Please wait until the data finishes loading.'
-        )
+      if (
+        this.loadingGrades ||
+        this.loadingSubjects ||
+        this.loadingGovernmentExams ||
+        this.loadingGovernmentSubjects
+      ) {
+        return this.fail('Please wait until the data finishes loading.')
       }
 
       return true
@@ -1234,45 +1428,35 @@ export default {
       return false
     },
 
-    async saveQuiz () {
-      if (this.saving || !this.validateQuiz()) {
-        return
-      }
-
-      this.saving = true
-
-      const payload = {
+    buildPayload () {
+      return {
         title: this.quiz.title.trim(),
-
         topic: this.quiz.topic ? this.quiz.topic.trim() : null,
-
         description: this.quiz.description
           ? this.quiz.description.trim()
           : null,
 
-        grade_id: Number(this.quiz.grade_id),
+        grade_id: this.isGovGrade ? null : Number(this.quiz.grade_id),
+        subject_id: this.isGovGrade ? null : Number(this.quiz.subject_id),
 
-        subject_id: Number(this.quiz.subject_id),
+        government_exam_subject_id: this.isGovGrade
+          ? Number(this.quiz.government_exam_subject_id)
+          : null,
 
-        al_stream: this.isAlGrade ? this.quiz.al_stream : null,
+        al_stream: this.isAlGrade && !this.isGovGrade
+          ? this.quiz.al_stream
+          : null,
 
         medium: this.quiz.medium,
-
         time_limit_minutes: Number(this.quiz.time_limit_minutes),
-
         shuffle_questions: Boolean(this.quiz.shuffle_questions),
 
         questions: this.questions.map(question => ({
           question_text: question.question_text,
-
           image_url: this.sanitizeImageUrl(question.image_url),
-
           correct_answer: question.correct_answer,
-
           difficulty: question.difficulty,
-
           explanation: question.explanation || null,
-
           options: {
             A: question.options.A,
             B: question.options.B,
@@ -1281,17 +1465,32 @@ export default {
           }
         }))
       }
+    },
+
+    async saveQuiz () {
+      if (this.saving || !this.validateQuiz()) { return }
+
+      this.saving = true
+      const payload = this.buildPayload()
 
       try {
-        const response = await this.$axios.$post(
-          '/admin/manual-quizzes',
-          payload
-        )
+        let response
+
+        if (this.editMode) {
+          response = await this.$axios.$put(
+            `/admin/manual-quizzes/${this.editingQuizId}`,
+            payload
+          )
+        } else {
+          response = await this.$axios.$post(
+            '/admin/manual-quizzes',
+            payload
+          )
+        }
 
         if (!response || response.success !== true) {
           throw new Error(
-            (response && response.message) ||
-              'Unable to save the quiz.'
+            (response && response.message) || 'Unable to save the quiz.'
           )
         }
 
@@ -1305,7 +1504,11 @@ export default {
 
         this.savedDialog = true
 
-        this.notify('Manual quiz saved successfully.')
+        this.notify(
+          this.editMode
+            ? 'Manual quiz updated successfully.'
+            : 'Manual quiz saved successfully.'
+        )
       } catch (error) {
         if (error.response) {
           this.handleApiError(error, 'Unable to save the quiz.')
@@ -1318,6 +1521,15 @@ export default {
       } finally {
         this.saving = false
       }
+    },
+
+    goToQuizzes () {
+      this.savedDialog = false
+      this.$router.push('/questions/manual-quizzes')
+    },
+
+    cancelEditMode () {
+      this.$router.push('/questions/manual-quizzes')
     },
 
     startNewQuiz () {
@@ -1334,8 +1546,11 @@ export default {
       this.current = emptyQuestion()
       this.editingIndex = null
 
-      this.savedSummary = { id: null, title: '', count: 0 }
+      this.subjects = []
+      this.governmentExams = []
+      this.governmentExamSubjects = []
 
+      this.savedSummary = { id: null, title: '', count: 0 }
       this.resetImageInput()
 
       if (silent !== true) {
@@ -1377,6 +1592,12 @@ export default {
   font-size: 17px;
   font-weight: 700;
   border-bottom: 1px solid #1f2937;
+}
+
+.loading-text {
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 /* =========================================================

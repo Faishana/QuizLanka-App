@@ -115,6 +115,14 @@ export default {
           ]
         },
         {
+          title: 'Government Exams',
+          items: [
+            { title: 'Exam Categories', to: '/Government Exams/government-exam-categories', icon: 'mdi-school-outline' },
+            { title: 'Manage Exams', to: '/Government Exams/government-exams', icon: 'mdi-book-open-page-variant-outline' },
+            { title: 'Exam Subjects', to: '/Government Exams/government-exam-subjects', icon: 'mdi-book-open-page-variant-outline' }
+          ]
+        },
+        {
           title: 'CONTENT',
           items: [
             {

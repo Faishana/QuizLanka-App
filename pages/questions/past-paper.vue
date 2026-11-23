@@ -107,9 +107,9 @@
               />
             </v-col>
 
-            <!-- Stream (only for A/L) -->
+            <!-- Stream (only for A/L, not for Government) -->
             <v-col
-              v-if="isAlGrade"
+              v-if="isAlGrade && !isGovGrade"
               cols="12"
               md="3"
             >
@@ -136,8 +136,56 @@
               </v-select>
             </v-col>
 
-            <!-- Subject -->
+            <!-- Government Exam Type -->
             <v-col
+              v-if="isGovGrade"
+              cols="12"
+              md="3"
+            >
+              <v-select
+                v-model="paper.government_exam_id"
+                :items="governmentExams"
+                item-text="name"
+                item-value="id"
+                label="Government Exam Type"
+                placeholder="Select exam type"
+                outlined
+                dense
+                hide-details
+                class="dark-field"
+                :loading="loadingGovernmentExams"
+                :disabled="loadingGovernmentExams"
+              />
+            </v-col>
+
+            <!-- Government Exam Subject -->
+            <v-col
+              v-if="isGovGrade"
+              cols="12"
+              md="3"
+            >
+              <v-select
+                v-model="paper.government_exam_subject_id"
+                :items="governmentExamSubjects"
+                item-text="name"
+                item-value="id"
+                label="Government Exam Subject"
+                placeholder="Select exam subject"
+                outlined
+                dense
+                hide-details
+                class="dark-field"
+                :loading="loadingGovernmentSubjects"
+                :disabled="
+                  !paper.government_exam_id ||
+                    loadingGovernmentSubjects
+                "
+              />
+            </v-col>
+
+            <!-- Normal School Subject -->
+            <v-col
+              v-if="paper.grade_id && !isGovGrade"
               cols="12"
               md="3"
             >
@@ -177,7 +225,7 @@
             <!-- Medium -->
             <v-col
               cols="12"
-              :md="isAlGrade ? 4 : 3"
+              :md="isAlGrade && !isGovGrade ? 4 : 3"
             >
               <v-select
                 v-model="paper.medium"
@@ -195,7 +243,7 @@
             <!-- Paper Name -->
             <v-col
               cols="12"
-              :md="isAlGrade ? 8 : 9"
+              :md="isAlGrade && !isGovGrade ? 8 : 9"
             >
               <v-text-field
                 v-model="paper.title"
@@ -773,14 +821,25 @@ export default {
       loadingGrades: false,
       loadingSubjects: false,
 
+      loadingGovernmentExams: false,
+      loadingGovernmentSubjects: false,
+
       uploadingImage: false,
 
       grades: [],
       subjects: [],
 
+      governmentExams: [],
+      governmentExamSubjects: [],
+
       paper: {
         grade_id: null,
         subject_id: null,
+
+        // Government Exam fields
+        government_exam_id: null,
+        government_exam_subject_id: null,
+
         al_stream: null,
         year: null,
         medium: 'si',
@@ -836,7 +895,6 @@ export default {
   },
 
   computed: {
-    // Detect whether selected grade is A/L.
     isAlGrade () {
       if (!this.paper.grade_id) {
         return false
@@ -858,18 +916,22 @@ export default {
         g => Number(g.id) === Number(this.paper.grade_id)
       )
 
-      return !!(
-        grade &&
-        (
-          grade.slug === 'gov' ||
-          String(grade.category).toLowerCase() === 'government exam'
-        )
+      if (!grade) {
+        return false
+      }
+
+      const category = String(grade.category || '').toLowerCase()
+      const slug = String(grade.slug || '').toLowerCase()
+
+      return (
+        category === 'government exam' ||
+        category === 'gov' ||
+        slug === 'gov'
       )
     },
 
-    // Enable subject selection after grade and stream selection.
     canSelectSubject () {
-      if (!this.paper.grade_id) {
+      if (!this.paper.grade_id || this.isGovGrade) {
         return false
       }
 
@@ -885,12 +947,16 @@ export default {
         return 'Select a grade first'
       }
 
+      if (this.isGovGrade) {
+        return ''
+      }
+
       if (this.isAlGrade && !this.paper.al_stream) {
         return 'Select an A/L stream first'
       }
 
-      if (this.isGovGrade) {
-        return 'Select a government examination subject'
+      if (this.loadingSubjects) {
+        return 'Loading subjects...'
       }
 
       return ''
@@ -917,27 +983,56 @@ export default {
   },
 
   watch: {
-    // Grade changes.
+    // Grade changes
     'paper.grade_id' (newValue, oldValue) {
       if (this.loadingPaper) {
         return
       }
 
-      if (newValue === oldValue) {
+      if (String(newValue) === String(oldValue)) {
         return
       }
 
+      // Reset previous selections
       this.paper.subject_id = null
       this.paper.al_stream = null
+      this.paper.government_exam_id = null
+      this.paper.government_exam_subject_id = null
 
-      if (newValue) {
-        this.loadSubjects()
+      this.subjects = []
+      this.governmentExams = []
+      this.governmentExamSubjects = []
+
+      if (!newValue) {
+        return
+      }
+
+      if (this.isGovGrade) {
+        this.loadGovernmentExams()
       } else {
-        this.subjects = []
+        this.loadSubjects()
       }
     },
 
-    // A/L stream changes.
+    // Government Exam changes
+    'paper.government_exam_id' (newValue, oldValue) {
+      if (this.loadingPaper) {
+        return
+      }
+
+      if (String(newValue) === String(oldValue)) {
+        return
+      }
+
+      this.paper.government_exam_subject_id = null
+      this.governmentExamSubjects = []
+
+      if (newValue) {
+        this.loadGovernmentExamSubjects(newValue)
+      }
+    },
+
+    // A/L stream changes
     'paper.al_stream' (newValue, oldValue) {
       if (this.loadingPaper) {
         return
@@ -992,11 +1087,10 @@ export default {
     },
 
     // =====================================================
-    // LOAD SUBJECTS
+    // LOAD SCHOOL SUBJECTS (Scholarship / O/L / A/L)
     // =====================================================
-
     async loadSubjects () {
-      if (!this.paper.grade_id) {
+      if (!this.paper.grade_id || this.isGovGrade) {
         this.subjects = []
         return
       }
@@ -1004,36 +1098,17 @@ export default {
       this.loadingSubjects = true
 
       try {
-        let response
-
-        // ==========================================
-        // GOV SUBJECTS
-        // GOV subjects are not linked through
-        // grade_subjects pivot table.
-        // ==========================================
-        if (this.isGovGrade) {
-          response = await this.$axios.get('/public/subjects', {
-            params: {
-              grade_category: 'gov'
-            }
-          })
-        } else {
-          // ==========================================
-          // NORMAL GRADES
-          // Scholarship / O/L / A/L
-          // ==========================================
-          const params = {
-            grade_id: this.paper.grade_id
-          }
-
-          if (this.isAlGrade && this.paper.al_stream) {
-            params.al_stream = this.paper.al_stream
-          }
-
-          response = await this.$axios.get('/public/subjects', {
-            params
-          })
+        const params = {
+          grade_id: this.paper.grade_id
         }
+
+        if (this.isAlGrade && this.paper.al_stream) {
+          params.al_stream = this.paper.al_stream
+        }
+
+        const response = await this.$axios.get('/public/subjects', {
+          params
+        })
 
         const data = response.data
 
@@ -1048,6 +1123,85 @@ export default {
         this.handleApiError(error, 'Unable to load subjects.')
       } finally {
         this.loadingSubjects = false
+      }
+    },
+
+    // =====================================================
+    // LOAD GOVERNMENT EXAMS
+    // =====================================================
+    async loadGovernmentExams () {
+      this.loadingGovernmentExams = true
+
+      try {
+        const response = await this.$axios.get(
+          '/admin/government-exams',
+          {
+            params: {
+              is_active: 1,
+              per_page: 100
+            }
+          }
+        )
+
+        const data = response.data
+
+        this.governmentExams =
+          data?.data?.data || []
+      } catch (error) {
+        console.error('Load government exams error:', error)
+
+        this.governmentExams = []
+
+        this.handleApiError(
+          error,
+          'Unable to load government exams.'
+        )
+      } finally {
+        this.loadingGovernmentExams = false
+      }
+    },
+
+    // =====================================================
+    // LOAD GOVERNMENT EXAM SUBJECTS
+    // =====================================================
+    async loadGovernmentExamSubjects (examId) {
+      if (!examId) {
+        this.governmentExamSubjects = []
+        return
+      }
+
+      this.loadingGovernmentSubjects = true
+
+      try {
+        const response = await this.$axios.get(
+          '/admin/government-exam-subjects',
+          {
+            params: {
+              government_exam_id: examId,
+              is_active: 1,
+              per_page: 100
+            }
+          }
+        )
+
+        const data = response.data
+
+        this.governmentExamSubjects =
+          data?.data?.data || []
+      } catch (error) {
+        console.error(
+          'Load government exam subjects error:',
+          error
+        )
+
+        this.governmentExamSubjects = []
+
+        this.handleApiError(
+          error,
+          'Unable to load government exam subjects.'
+        )
+      } finally {
+        this.loadingGovernmentSubjects = false
       }
     },
 
@@ -1072,10 +1226,19 @@ export default {
 
         const pastPaper = data.data
 
-        // Load paper information.
+        // Load paper information (School + Government)
         this.paper = {
-          grade_id: pastPaper.grade_id,
-          subject_id: pastPaper.subject_id,
+          grade_id: pastPaper.grade_id || null,
+          subject_id: pastPaper.subject_id || null,
+
+          government_exam_id:
+            pastPaper.government_exam_subject?.government_exam_id ||
+            pastPaper.government_exam_id ||
+            null,
+
+          government_exam_subject_id:
+            pastPaper.government_exam_subject_id || null,
+
           al_stream: pastPaper.al_stream || null,
           year: pastPaper.year,
           medium: pastPaper.medium,
@@ -1087,14 +1250,23 @@ export default {
             pastPaper.total_questions || 40
           ),
 
-          // Load saved time limit.
           time_limit_minutes: Number(
             pastPaper.time_limit_minutes || 60
           )
         }
 
-        // Load subjects for selected grade and stream.
-        await this.loadSubjects()
+        // Load the correct subject list.
+        if (this.isGovGrade) {
+          await this.loadGovernmentExams()
+
+          if (this.paper.government_exam_id) {
+            await this.loadGovernmentExamSubjects(
+              this.paper.government_exam_id
+            )
+          }
+        } else {
+          await this.loadSubjects()
+        }
 
         // Load existing questions.
         this.questions = (pastPaper.questions || []).map(question => ({
@@ -1251,14 +1423,26 @@ export default {
         return false
       }
 
-      if (this.isAlGrade && !this.paper.al_stream) {
-        this.showError('Please select the A/L stream.')
-        return false
-      }
+      if (this.isGovGrade) {
+        if (!this.paper.government_exam_id) {
+          this.showError('Please select a Government Exam Type.')
+          return false
+        }
 
-      if (!this.paper.subject_id) {
-        this.showError('Please select a subject.')
-        return false
+        if (!this.paper.government_exam_subject_id) {
+          this.showError('Please select a Government Exam Subject.')
+          return false
+        }
+      } else {
+        if (this.isAlGrade && !this.paper.al_stream) {
+          this.showError('Please select the A/L stream.')
+          return false
+        }
+
+        if (!this.paper.subject_id) {
+          this.showError('Please select a subject.')
+          return false
+        }
       }
 
       if (!this.paper.year) {
@@ -1276,7 +1460,6 @@ export default {
         return false
       }
 
-      // Validate total questions.
       const totalQuestions = Number(this.paper.total_questions)
 
       if (
@@ -1289,7 +1472,6 @@ export default {
         return false
       }
 
-      // Validate time limit.
       const timeLimit = Number(this.paper.time_limit_minutes)
 
       if (
@@ -1303,7 +1485,6 @@ export default {
         return false
       }
 
-      // Prevent entering more questions than allowed.
       if (this.questions.length > totalQuestions) {
         this.showError(
           'Entered questions cannot exceed total questions.'
@@ -1528,11 +1709,21 @@ export default {
 
       try {
         const payload = {
-          grade_id: Number(this.paper.grade_id),
+          // School: grade_id + subject_id
+          // Government: government_exam_subject_id
+          grade_id: this.isGovGrade
+            ? null
+            : Number(this.paper.grade_id),
 
-          subject_id: Number(this.paper.subject_id),
+          subject_id: this.isGovGrade
+            ? null
+            : Number(this.paper.subject_id),
 
-          al_stream: this.isAlGrade
+          government_exam_subject_id: this.isGovGrade
+            ? Number(this.paper.government_exam_subject_id)
+            : null,
+
+          al_stream: this.isAlGrade && !this.isGovGrade
             ? this.paper.al_stream
             : null,
 
@@ -1548,12 +1739,10 @@ export default {
 
           total_questions: Number(this.paper.total_questions),
 
-          // Time limit in minutes.
           time_limit_minutes: Number(
             this.paper.time_limit_minutes
           ),
 
-          // Questions and options.
           questions: this.questions.map((question, index) => ({
             question_number: index + 1,
 
@@ -1580,14 +1769,12 @@ export default {
 
         let response
 
-        // Update existing past paper.
         if (this.editMode) {
           response = await this.$axios.put(
             `/admin/past-papers/${this.editingPaperId}`,
             payload
           )
         } else {
-          // Create new past paper.
           response = await this.$axios.post(
             '/admin/past-papers',
             payload
@@ -1608,7 +1795,6 @@ export default {
             : 'Past paper saved successfully.'
         )
 
-        // Navigate to View Past Papers page.
         setTimeout(() => {
           this.$router.push('/questions/past-paper-quizes')
         }, 700)

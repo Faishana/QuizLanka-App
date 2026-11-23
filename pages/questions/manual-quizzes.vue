@@ -1,8 +1,5 @@
 <template>
   <div class="manual-quizzes-page">
-    <!-- =====================================================
-         PAGE HEADER
-    ====================================================== -->
     <div class="page-header">
       <div>
         <h1 class="page-title">
@@ -38,9 +35,6 @@
       </div>
     </div>
 
-    <!-- =====================================================
-         SUMMARY
-    ====================================================== -->
     <v-row class="summary-row">
       <v-col v-for="card in summaryCards" :key="card.label" cols="6" md="3">
         <div class="summary-card">
@@ -59,9 +53,6 @@
       </v-col>
     </v-row>
 
-    <!-- =====================================================
-         LOADING (first load)
-    ====================================================== -->
     <v-card
       v-if="loading && !quizzes.length"
       flat
@@ -73,9 +64,6 @@
       </div>
     </v-card>
 
-    <!-- =====================================================
-         EMPTY
-    ====================================================== -->
     <v-card
       v-else-if="!quizzes.length"
       flat
@@ -100,9 +88,6 @@
       </v-btn>
     </v-card>
 
-    <!-- =====================================================
-         QUIZ LIST
-    ====================================================== -->
     <v-card v-else flat class="panel-card list-card">
       <div class="list-toolbar">
         <span class="list-title">Quiz List</span>
@@ -119,7 +104,6 @@
         />
       </div>
 
-      <!-- Column headers -->
       <div class="list-head">
         <div>Quiz</div>
         <div class="col-grade">
@@ -148,7 +132,6 @@
         </div>
       </div>
 
-      <!-- Rows -->
       <div
         v-for="quiz in quizzes"
         :key="quiz.id"
@@ -165,7 +148,6 @@
           <div class="quiz-topic">
             {{ quiz.topic || 'No topic' }}
           </div>
-          <!-- Only visible on small screens, where columns are hidden -->
           <div class="row-meta">
             {{ gradeName(quiz) }} · {{ subjectName(quiz) }} · {{ mediumLabel(quiz.medium) }}
             · {{ questionCount(quiz) }} questions
@@ -237,6 +219,23 @@
               <v-btn
                 icon
                 small
+                class="act-edit"
+                v-on="on"
+                @click.stop="editQuiz(quiz)"
+              >
+                <v-icon size="19">
+                  mdi-pencil-outline
+                </v-icon>
+              </v-btn>
+            </template>
+            Edit quiz
+          </v-tooltip>
+
+          <v-tooltip bottom>
+            <template #activator="{ on }">
+              <v-btn
+                icon
+                small
                 class="act-delete"
                 v-on="on"
                 @click.stop="confirmDelete(quiz)"
@@ -251,7 +250,6 @@
         </div>
       </div>
 
-      <!-- Footer: rows per page + pagination -->
       <div class="list-footer">
         <div class="per-page">
           <span>Rows per page</span>
@@ -283,9 +281,7 @@
       </div>
     </v-card>
 
-    <!-- =====================================================
-         VIEW QUIZ DIALOG
-    ====================================================== -->
+    <!-- VIEW QUIZ DIALOG -->
     <v-dialog v-model="viewDialog" max-width="900" scrollable>
       <v-card class="dialog-card">
         <v-card-title class="dialog-header">
@@ -315,7 +311,7 @@
             <div class="detail-tiles">
               <div class="detail-tile">
                 <div class="tile-label">
-                  Grade
+                  {{ selectedQuiz.government_exam_subject_id ? 'Government Exam' : 'Grade' }}
                 </div>
                 <div class="tile-value">
                   {{ gradeName(selectedQuiz) }}
@@ -404,6 +400,17 @@
         <v-divider class="dialog-divider" />
 
         <v-card-actions class="dialog-footer">
+          <v-btn
+            v-if="selectedQuiz"
+            outlined
+            class="edit-dialog-btn"
+            @click="editSelectedQuiz"
+          >
+            <v-icon left size="17">
+              mdi-pencil-outline
+            </v-icon>
+            Edit
+          </v-btn>
           <v-spacer />
           <v-btn text class="clear-btn" @click="viewDialog = false">
             Close
@@ -412,9 +419,7 @@
       </v-card>
     </v-dialog>
 
-    <!-- =====================================================
-         DELETE DIALOG
-    ====================================================== -->
+    <!-- DELETE DIALOG -->
     <v-dialog v-model="deleteDialog" max-width="440">
       <v-card class="dialog-card">
         <v-card-text class="delete-body">
@@ -445,7 +450,6 @@
       </v-card>
     </v-dialog>
 
-    <!-- Snackbar -->
     <v-snackbar
       v-model="snackbar.show"
       :color="snackbar.color"
@@ -510,7 +514,6 @@ export default {
       return (this.selectedQuiz && this.selectedQuiz.questions) || []
     },
 
-    // Counts below are for the quizzes on the current page; "Total" is from the server.
     summaryCards () {
       const questions = this.quizzes.reduce((sum, quiz) => sum + this.questionCount(quiz), 0)
       const active = this.quizzes.filter(quiz => quiz.is_active).length
@@ -533,8 +536,6 @@ export default {
   },
 
   methods: {
-    /* ------------------------------ Backend ------------------------------ */
-
     async loadQuizzes () {
       const myRequest = ++this.requestId
 
@@ -543,19 +544,12 @@ export default {
 
         const response = await this.$axios.$get(
           '/admin/manual-quizzes',
-          {
-            params: {
-              page: this.page,
-              per_page: this.perPage
-            }
-          }
+          { params: { page: this.page, per_page: this.perPage } }
         )
 
-        // Ignore out-of-date responses
         if (myRequest !== this.requestId) { return }
 
         const pagination = response.data || {}
-
         this.quizzes = pagination.data || []
         this.total = pagination.total || 0
       } catch (error) {
@@ -589,6 +583,31 @@ export default {
       }
     },
 
+    /* ------------------------------ Edit ------------------------------ */
+
+    editQuiz (quiz) {
+      if (!quiz || !quiz.id) { return }
+
+      this.$router.push({
+        path: '/questions/quiz-entry',
+        query: { edit: quiz.id }
+      })
+    },
+
+    editSelectedQuiz () {
+      const quiz = this.selectedQuiz
+      if (!quiz || !quiz.id) { return }
+
+      this.viewDialog = false
+
+      this.$router.push({
+        path: '/questions/quiz-entry',
+        query: { edit: quiz.id }
+      })
+    },
+
+    /* ------------------------------ Delete ------------------------------ */
+
     confirmDelete (item) {
       this.quizToDelete = item
       this.deleteDialog = true
@@ -609,7 +628,6 @@ export default {
 
         this.showMessage('Quiz deleted successfully.', 'success')
 
-        // If that was the last quiz on this page, go back one page
         if (this.quizzes.length === 1 && this.page > 1) {
           this.page--
         }
@@ -635,10 +653,18 @@ export default {
     },
 
     gradeName (quiz) {
+      if (quiz && quiz.government_exam_subject_id) {
+        return quiz.government_exam_subject?.exam?.name || 'Government Exam'
+      }
+
       return quiz && quiz.grade ? quiz.grade.name : '-'
     },
 
     subjectName (quiz) {
+      if (quiz && quiz.government_exam_subject_id) {
+        return quiz.government_exam_subject?.name || '-'
+      }
+
       return quiz && quiz.subject ? quiz.subject.name : '-'
     },
 
@@ -648,24 +674,17 @@ export default {
       )
     },
 
-    // Highlights the correct option when the API provides correct_answer
     isCorrect (question, option) {
       return !!question.correct_answer && option.option_key === question.correct_answer
     },
 
     mediumLabel (value) {
-      const labels = {
-        si: 'Sinhala',
-        en: 'English',
-        ta: 'Tamil'
-      }
-
+      const labels = { si: 'Sinhala', en: 'English', ta: 'Tamil' }
       return labels[value] || value || '-'
     },
 
     formatDate (value) {
       if (!value) { return '-' }
-
       return new Date(value).toLocaleDateString('en-GB')
     },
 
@@ -711,6 +730,13 @@ export default {
   text-transform: none;
 }
 .clear-btn { color: #94a3b8 !important; text-transform: none; font-weight: 600; }
+
+.edit-dialog-btn {
+  border-color: #f59e0b !important;
+  color: #f59e0b !important;
+  text-transform: none;
+  font-weight: 700;
+}
 
 .panel-card {
   background: #111827 !important;
@@ -786,7 +812,6 @@ export default {
 }
 .list-title { color: #f8fafc; font-size: 16px; font-weight: 700; }
 
-/* Same column layout for the header and every row */
 .list-head,
 .list-row {
   display: grid;
@@ -799,7 +824,7 @@ export default {
     80px
     100px
     100px
-    84px;
+    124px;
   align-items: center;
   column-gap: 14px;
   padding: 0 20px;
@@ -873,6 +898,8 @@ export default {
 
 .row-actions { display: flex; align-items: center; justify-content: flex-end; gap: 2px; }
 .act-view { color: #22d3ee !important; }
+.act-edit { color: #f59e0b !important; }
+.act-edit:hover { color: #fbbf24 !important; }
 .act-delete { color: #64748b !important; }
 .act-delete:hover { color: #f87171 !important; }
 
@@ -1017,7 +1044,7 @@ export default {
 @media (max-width: 1350px) {
   .list-head,
   .list-row {
-    grid-template-columns: minmax(200px, 1fr) 100px 140px 90px 90px 100px 84px;
+    grid-template-columns: minmax(200px, 1fr) 100px 140px 90px 90px 100px 124px;
   }
   .col-time,
   .col-created { display: none; }
@@ -1026,7 +1053,7 @@ export default {
 @media (max-width: 1050px) {
   .list-head,
   .list-row {
-    grid-template-columns: minmax(180px, 1fr) 90px 100px 84px;
+    grid-template-columns: minmax(180px, 1fr) 90px 100px 124px;
   }
   .col-grade,
   .col-subject,
